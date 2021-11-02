@@ -1,0 +1,23 @@
+# 2021-11-01
+Found purple air API python wrapper: https://github.com/ReagentX/purple_air_api
+
+Next: 
+- can I combine `sensor_filter`s (useful + outside)?
+- can I get all channels? What to do with both channels? Check if they agree per [purple air doc](https://docs.google.com/document/d/15ijz94dXJ-YAZLi9iZ_RaBwrZ4KtYeCy08goGBwnbCU/edit)
+  - PurpleAir sensors employ a dual laser counter to provide some level of data integrity. This is intended to provide a way of determining sensor health and fault detection. Some examples of what can go wrong with a laser counter are a fan failure, insects or other debris inside the device or just a layer of dust from long term exposure. 
+
+    If both laser counters (channels) are in agreement, the data can be seen as excellent quality. If there are different readings from the two channels, there may be a fault with one or both.
+
+    In the case of a fault, the channel may be marked as flagged or downgraded (suspect or known faulty).
+
+- filter lat lons in california border
+- download historical data for all sensors in california
+
+EPA:
+- figure out the difference between PM2.5 measures
+  - FRM / FEM / non-FRM PM2.5
+  - PM2.5 FRM/FEM Mass
+  - PM2.5 non FRM/FEM Mass
+  - PM2.5 Speciation
+  - [see particulates here](https://aqs.epa.gov/aqsweb/airdata/download_files.html#Raw)
+- check for python / R wrapper for [EPA sensors API](https://aqs.epa.gov/aqsweb/documents/data_api.html#variables) or look in [pre-generated files](https://aqs.epa.gov/aqsweb/airdata/download_files.html#Raw)
