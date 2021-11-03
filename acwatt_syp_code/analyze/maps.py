@@ -36,7 +36,7 @@ marker_kwgs = {'facecolor': (1, 0, 0, 0.2),
                'marker': 'o'}
 
 plt.style.use('ggplot')
-fix, ax = plt.subplots(figsize=(15, 8))
+fix, ax = plt.subplots(figsize=(7.5, 4))
 world.plot(ax=ax, **polygon_kwgs)
 sensors.plot(ax=ax, **marker_kwgs)
 plt.title("Valid Purple Air Monitor Locations, Global")
@@ -46,7 +46,7 @@ plt.tight_layout()
 plt.savefig(save_dir / 'purple_air_sensor_map_global.png')
 
 
-fix, ax = plt.subplots(figsize=(15, 8))
+fix, ax = plt.subplots(figsize=(7, 4))
 lower48.plot(ax=ax, **polygon_kwgs)
 sensors_lower48.plot(ax=ax, **marker_kwgs)
 plt.title("Valid Purple Air Monitor Locations, Contiguous United States")
@@ -55,7 +55,7 @@ plt.ylabel('Latitude')
 plt.tight_layout()
 plt.savefig(save_dir / 'purple_air_sensor_map_us.png')
 
-fix, ax = plt.subplots(figsize=(8, 15))
+fix, ax = plt.subplots(figsize=(8, 8))
 california.plot(ax=ax, **polygon_kwgs)
 sensors_california.plot(ax=ax, **marker_kwgs)
 plt.title("Valid Purple Air Monitor Locations, California")
