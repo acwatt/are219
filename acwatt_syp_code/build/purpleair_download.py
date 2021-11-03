@@ -55,6 +55,7 @@ def get_data_from_sensor(sensor_id):
     return df
 
 
-if __name__ == "__main__":
+def load_sensor_data():
     sensor_df = list_sensors()
     sensor_df = filter_data(sensor_df)
+    return sensor_df
