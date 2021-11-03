@@ -1,3 +1,11 @@
+# 2021-11-02
+Unsure if python wrapper will properly bulk download the data -- don't want to make too many repeated requests or I might get blocked by the purpleair firewall
+
+Tried the map download tool. Worked for campus over 2 days, but did not work for all of berkeley over one year.
+Try all of berkeley over two days and shift upward.
+Should try to see if rest request is easy to get bulk data given list of sensors.
+
+
 # 2021-11-01
 Found purple air API python wrapper: https://github.com/ReagentX/purple_air_api
 
