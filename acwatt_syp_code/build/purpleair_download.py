@@ -4,7 +4,7 @@
 
 # Built-in Imports
 # Third-party Imports
-from purpleair.network import SensorList
+from purpleair.network import SensorList, Sensor
 # Local Imports
 
 
@@ -28,10 +28,17 @@ Conditions of use:
 def list_sensors():
     """Return list of sensors that have valid data."""
     p = SensorList()  # Initialized 22,877 sensors!
-    # Other sensor filters include 'outside', 'all', 'family', and 'no_child'
-    df = p.to_dataframe(sensor_filter='useful',
+    # Other sensor filters include 'outside', 'all', 'useful', 'family', and 'no_child'
+    df = p.to_dataframe(sensor_filter='all',
                         channel='parent')
-    print(len(df))  # 16902
+    return df
+
+
+def filter_data(df):
+    df = (df.query('location_type == "outside"')
+          .query('downgraded == False')
+          .query('flagged == False')
+          )
     return df
 
 
@@ -41,6 +48,13 @@ def download_pm25(sensor_list):
         pass
 
 
+def get_data_from_sensor(sensor_id):
+    sensor = Sensor(sensor_id)
+    df = sensor.parent.get_historical(weeks_to_get=1,
+                                  thingspeak_field='secondary')
+    return df
+
 
 if __name__ == "__main__":
-    sensor_list = list_sensors()
+    sensor_df = list_sensors()
+    sensor_df = filter_data(sensor_df)
