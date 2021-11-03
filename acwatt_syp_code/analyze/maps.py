@@ -27,11 +27,10 @@ sensors = gpd.GeoDataFrame(sensor_df, crs=all_states.crs, geometry=sensor_points
 sensors_lower48 = sjoin(sensors, lower48, how='inner')
 sensors_california = sjoin(sensors, california, how='inner')
 
-polygon_kwgs = {'facecolor': "grey",
-                'edgecolor': 'blue',
-                'lw': 0.7,
-                'alpha': 0.5}
-marker_kwgs = {'facecolor': (1, 0, 0, 0.2),
+polygon_kwgs = {'facecolor': (100/255, 100/255, 100/255, 1),
+                'edgecolor': 'white',
+                'lw': 0.2}
+marker_kwgs = {'facecolor': (0, 204/255, 204/255, 0.2),
                'markersize': 20,
                'marker': 'o'}
 

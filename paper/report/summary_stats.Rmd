@@ -10,7 +10,7 @@ output:
 header-includes:
    - \usepackage{dcolumn}
    - \usepackage{amsmath}
-knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = file.path(dirname(inputFile), 'ARE_213_PS2a.pdf')) })
+knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = file.path(dirname(inputFile), 'ARE219_SYP_summary-stats_acWatt.pdf')) })
 ---
 
 ```{r setup, include=FALSE}
@@ -33,15 +33,14 @@ Notes: Need to ps2a.R from ps2a folder (without Rstudio being started first)
 table_type = "text"
 ```
 
-```{r packages, results='hide', message=FALSE, echo=T}
+```{r packages, results='hide', message=FALSE, echo=F}
 library(tidyverse)
 library(foreign)
 library(stargazer)
 ```
-
-
-
-
+![Valid Purple Air Monitor Locations, Global](../../output/summary_stats/maps/purple_air_sensor_map_global.png)
+![Valid Purple Air Monitor Locations, Contiguous United States](../../output/summary_stats/maps/purple_air_sensor_map_us.png)
+![Valid Purple Air Monitor Locations, Global](../../output/summary_stats/maps/purple_air_sensor_map_california.png)
 
 
 
