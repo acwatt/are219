@@ -51,7 +51,7 @@ def sensor_df_to_geo(df, area):
     return sensors_gdf, base_gdf
 
 
-def sensor_plot(sensor_df, area='world', rootname='are219'):
+def sensor_plot(sensor_df, area='world', rootname='are219', dpi=300):
     """Save png of plot of sensors in given geographical area.
 
     sensor_df = dataframe of sensor data, inlcuding columns = lat, lon
@@ -80,7 +80,7 @@ def sensor_plot(sensor_df, area='world', rootname='are219'):
     plt.xlabel('Longitude')
     plt.ylabel('Latitude')
     plt.tight_layout()
-    plt.savefig(save_dir / f'purple_air_sensor_map_{area}.png')
+    plt.savefig(save_dir / f'purple_air_sensor_map_{area}.png', dpi=dpi)
 
 
 def make_all_sensor_maps(sensor_df):
