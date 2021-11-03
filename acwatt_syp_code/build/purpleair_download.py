@@ -58,4 +58,21 @@ def get_data_from_sensor(sensor_id):
 def load_sensor_data():
     sensor_df = list_sensors()
     sensor_df = filter_data(sensor_df)
+    # Single sensor
+
+    se = Sensor(int(sensor_df.index[0]))
+    print(se)
+    print(se.parent)
+    print(se.child)
+    print(se.parent.as_flat_dict())
+    se.get_field(3)
+    se.get_field(4)
+    print(se.thingspeak_data.keys())
+    df = se.parent.get_historical(weeks_to_get=1,
+                                  thingspeak_field='secondary')
+
+    print(df.head())
+    print(df.tail())
     return sensor_df
+
+
