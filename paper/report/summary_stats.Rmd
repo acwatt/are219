@@ -38,7 +38,7 @@ library(tidyverse)
 library(foreign)
 library(stargazer)
 ```
-![Valid Purple Air Monitor Locations, Global](../../output/summary_stats/maps/purple_air_sensor_map_global.png)
+![Valid Purple Air Monitor Locations, Global](../../output/summary_stats/maps/purple_air_sensor_map_world.png)
 ![Valid Purple Air Monitor Locations, Contiguous United States](../../output/summary_stats/maps/purple_air_sensor_map_us.png)
 ![Valid Purple Air Monitor Locations, Global](../../output/summary_stats/maps/purple_air_sensor_map_california.png)
 
