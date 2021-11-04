@@ -39,6 +39,7 @@ class Data:
         self.root = data_dir
         self.checkpoints = self.root / 'checkpoints'
         self.configs = self.root / 'configs'
+        self.epa = self.root / 'epa'
         self.gis = self.root / 'gis'
         self.gis_county = self.gis / 'cb_2018_us_county_500k' / 'cb_2018_us_county_500k.shp'
         self.gis_state = self.gis / 'cb_2018_us_state_5m' / 'cb_2018_us_state_5m.shp'
@@ -47,7 +48,7 @@ class Data:
         self.temp = self.root / 'temp'
         self.test_data = self.root / 'test_data'
         # Lookup tables
-        self.lookup_jpg = self.tables / 'tbl_jpg_lookup.csv'
+        self.lookup_location = self.tables / 'tbl_location_lookup.csv'
         self.lookup_fips = self.tables / 'tbl_fips_lookup.csv'
 
 
@@ -65,7 +66,8 @@ class GISSettings:
 class PurpleAirSettings:
     """Class to hold settings for Purple Air API when downloading data."""
     def __init__(self):
-        pass
+        self.read_key = '5498FF4F-1642-11EC-BAD6-42010A800017'
+        self.write_key = '5499CF6C-1642-11EC-BAD6-42010A800017'
 
 
 # FUNCTIONS --------------------------
