@@ -38,6 +38,9 @@ table_type = "text"
 library(tidyverse)
 library(foreign)
 library(stargazer)
+library(ggplot2)
+library(lubridate)
+library(kableExtra)
 ```
 
 # Geographical Distribution of Purple Air Sensors
@@ -69,18 +72,102 @@ A more interesting red graph would probably be population-distance-weighted fire
 
 ![Purple Air Adoption over time vs. Air Quality in California](../../output/summary_stats/graphs/purple_air_sensor_cum_time_california.png)
 
+```{r summary stats, echo=F, warning=F}
+pa = read.csv('../../data/purpleair/date_created_california_manual_request_2021-11-09_metadata.csv') %>%
+    mutate(date_start = as.Date(date_start)) %>%
+    arrange(date_start) %>% mutate(order=(1:nrow(.))) %>%
+    select(-date_created)
+pa_counts = pa %>% count(COUNTYFP, year(date_start), sort = TRUE)
+
+year_stats0 = pa %>%
+    count(year(date_start))
+
+year_stats1 = pa_counts %>% 
+    group_by(`year(date_start)`) %>% 
+    summarize(max_n = max(n))
+pa_county = read.csv('../../data/purpleair/current_pa_sensors_metadata.csv')
+pop = read.csv('../../data/gis/co-est2019-annres-06.xlsx')
+aqi = read.csv('../../data/epa/aqi/daily_aqi_by_county_2016-2021.csv')
+# stargazer(pa, type='text')
+
+year_stats = pa %>%
+    group_by(year(date_start)) %>%
+    summarise(pm2.5_ym = mean(pm2.5, na.rm=T)) %>%
+    merge(., year_stats0) %>%
+    merge(., year_stats1)
+
+year_stats %>%
+    rename("Year Sensor Joined the Network"="year(date_start)",
+           "Mean PM2.5"="pm2.5_ym",
+           "Sensors joined in CA"=n,
+           "Max # of Sensors joining in any CA county"=max_n) %>%
+    kbl(caption = "Statistics of Purple Air Pollution Sensors Joining the Network", 
+        align = 'ccc', digits = 3) %>%
+    kable_minimal()
+
+pa2 = merge(pa, pa_county, by.x = "sensor_index", by.y = "id")
+
+```
+
+\FloatBarrier
+
+In the Figure 3 and Table 1, we see that many Purple Air pollution sensors joined
+the network in years of high pollution, or just after years of high pollution.
+One research question I hope to address is what might explain the spatial and
+temporal missingness of pollution data from county-level sensors that the EPA
+requires non-attainment counties to keep. Because Purple Air monitors create a 
+network spread over the state, I can estimate pollution in areas that don't have
+EPA monitors or in places that have EPA monitors but at times when they are shut
+off. However, from Figure 2, we can see the distribution of Purple Air monitors
+is not distributed evenly or randomly.
+
+
+
+
 
 \FloatBarrier
 \newpage
 # Data plan
 
-I am planning to limit my second year project to California and focus on comparing Purple Air PM2.5 data to EPA monitor data. I have not yet finished collecting PM2.5 data from Purple Air monitors but plan to collect years 2018-2021 for all California sensors via the Purple Air API. I am also in the process of collecting EPA PM2.5 data via the EPA API.
+<!-- This could become a section of your final paper. Describe the dataset. Provide summary statistics for relevant variables. Discuss issues that may affect your estimates. For example: measurement error, reverse causality, omitted variables bias, weak instruments, failure to converge. -->
 
-In order to calibrate a selection model into Purple Air adoption, I plan to collect Census Block Group level demographic data and calibrate the model on the census block group level over 2018-2020 (inclusive). I also plan to collect weather data from PRISM.
+<!-- Description: Several page writeup, suitable for inclusion in your final paper. Your advisor must sign off on this output. -->
 
-To model measurement error of sensors (EPA sensors vs. Purple Air sensors), I plan to use pollution distribution data generated for IPCC climate models. I've been told these data are available to download and are probably the best measure of "ground truth" that I have access to.
+I am planning to limit my second year project to California and focus on
+comparing Purple Air PM2.5 data to EPA monitor data. I have not yet finished
+collecting PM2.5 data from Purple Air monitors but plan to collect years
+2016-2021 for all California sensors via the Purple Air API. I am also in the
+process of collecting EPA PM2.5 data via the EPA API and have a small sample
+from Meredith.
+
+In order to calibrate a selection model into Purple Air adoption, I plan to
+collect Census Block Group level demographic data and calibrate the model on the
+census block group level over 2018-2020 (inclusive). I also plan to collect
+weather data from PRISM.
+
+To model measurement error of sensors (EPA sensors vs. Purple Air sensors), I
+plan to use pollution distribution data generated for IPCC climate models. I've
+been told these data are available to download and are probably the best measure
+of "ground truth" that I have access to.
 
 
+# Issues that will affect my estimates of pollution
+
+Measurement error from the Purple Air monitors will need to be addressed. I plan
+to explore a combination of averaging over multiple sensors and regression-based
+correction using EPA monitors that are near some Purple Air monitors as ground 
+truth pollution for that location.
+
+I also plan to estimate a selection model into Purple Air adoption so omitted
+variable bias will be a large concern. I will have census data at the census
+block group level that I can match to the location of the PA monitors. But that
+is not unit-level data so also suffers from measurement error if I am estimating
+an adoption model at the unit level. I am also interested in modeling this as
+a binary discrete choice model with block- or county-level adoption shares (percentage
+of the PA monitors adopted in that month, in that county). With either of these
+models of adoption, I will need to instrument PA sensor prices, but since it is
+a homogeneous good sold by only one firm and the prices have remained nearly the
+same for 4 years, I would predict I will have a weak instrument problem.
 
 
 

@@ -17,7 +17,7 @@ from ..utils.config import PATHS
 plt.style.use('ggplot')
 
 
-def sensor_df_to_geo(df, area):
+def sensor_df_to_geo(df, area, by=None):
     """Return geopandas dataframes: one with sensor points, one with geographic area polygons.
 
     df = dataframe of sensor data, inlcuding columns = lat, lon
@@ -33,7 +33,12 @@ def sensor_df_to_geo(df, area):
                 .loc[base_gdf.STATEFP.astype(int) < 60]
                 .loc[~base_gdf.NAME.isin(['Alaska', 'Hawaii'])])
         elif area == 'california':
-            base_gdf = base_gdf.loc[base_gdf.NAME.isin(['California'])]
+            if by is None:
+                base_gdf = base_gdf.loc[base_gdf.NAME.isin(['California'])]
+            elif by == 'county':
+                path_ = PATHS.data.gis / 'cb_2018_us_county_500k' / 'cb_2018_us_county_500k.shp'
+                base_gdf = gpd.read_file(path_)
+                base_gdf = base_gdf.loc[base_gdf.STATEFP.astype(int) == 6]
     elif area == 'benton county':
         path_ = PATHS.data.gis / 'cb_2018_us_county_500k' / 'cb_2018_us_county_500k.shp'
         base_gdf = gpd.read_file(path_)
@@ -98,8 +103,8 @@ def weighted_average(df, data_col, weight_col, by_col):
 
 
 def culumative_time_plot(dpi=300):
-    # Purple Air Data (date created for all current california sensors)
-    date_file = PATHS.data.test_data / 'date_created_california_manual_request.txt'
+    # Purple Air Data (date_created for all current california sensors)
+    date_file = PATHS.data.test_data / 'date_created_california_manual_request_2021-11-09.txt'
     dict_ = json.load(open(date_file,))
     df1 = (pd.DataFrame(dict_['data'], columns=dict_['fields'])
           .assign(date_start=lambda x: pd.to_datetime(x['date_created'], unit='s')))
@@ -143,14 +148,31 @@ def culumative_time_plot(dpi=300):
     save_dir = PATHS.output / 'summary_stats' / 'graphs'
     plt.savefig(save_dir / f'purple_air_sensor_cum_time_california.png', dpi=dpi)
 
+    df1.to_csv(PATHS.data.test_data / 'date_created_california_manual_request_2021-11-09.csv', index=False)
+    df2.to_csv(PATHS.data.epa / 'aqi' / 'daily_aqi_by_county_2016-2021.csv', index=False)
 
-def aqi_time_plot():
-    df = pd.concat([pd.read_csv(p) for p in PATHS.data.epa.glob('*csv')],
-                   ignore_index=True)
-    dfs = [pd.read_csv()]
 
+def intersect_pa_counties(sensor_df):
+    date_file = PATHS.data.test_data / 'date_created_california_manual_request_2021-11-09.txt'
+    dict_ = json.load(open(date_file, ))
+    df1 = (pd.DataFrame(dict_['data'], columns=dict_['fields'])
+           .assign(date_start=lambda x: pd.to_datetime(x['date_created'], unit='s')))
+    df1['lat'] = df1.latitude
+    df1['lon'] = df1.longitude
+    sensor_gdf, base_gdf = sensor_df_to_geo(df1, 'california', by='county')
+    sensor_gdf = sensor_gdf.reset_index()
+    sensor_gdf.to_csv(PATHS.data.purpleair / 'date_created_california_manual_request_2021-11-09_metadata.csv', index=False)
+
+
+    sensor_gdf, base_gdf = sensor_df_to_geo(sensor_df, 'california', by='county')
+    sensor_gdf = sensor_gdf.reset_index()
+    sensor_gdf.to_csv(PATHS.data.purpleair / 'current_pa_sensors_metadata.csv', index=False)
 
 def make_all_sensor_maps(sensor_df):
-    for area in ['world', 'us', 'california', 'benton county']:
-        sensor_plot(sensor_df, area=area)
+    intersect_pa_counties(sensor_df)
+    # for area in ['world', 'us', 'california', 'benton county']:
+    #     sensor_plot(sensor_df, area=area)
     culumative_time_plot()
+
+
+

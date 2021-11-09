@@ -29,9 +29,11 @@ Conditions of use:
 
 def df_sensors():
     """Return list of sensors that have valid data."""
-    p = pan.SensorList()  # Initialized 22,877 sensors!
+    p = pan.SensorList()  # Initialized 22,877 sensors!22,836
     # Other sensor filters include 'outside', 'all', 'useful', 'family', and 'no_child'
     df = p.to_dataframe(sensor_filter='useful', channel='parent')
+    # TODO: Cache and check if this has already been downloaded in past 7 days
+    #   if not, redownload and update the cache
     return df
 
 
