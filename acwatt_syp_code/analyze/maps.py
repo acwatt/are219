@@ -22,6 +22,7 @@ def sensor_df_to_geo(df, area, by=None):
 
     df = dataframe of sensor data, inlcuding columns = lat, lon
     area = string indicating area = ['world', 'us', 'california']
+    by = None or 'county', if 'county', then dataframe and maps contain county borders.
     """
     if area == 'world':
         base_gdf = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
@@ -162,7 +163,6 @@ def intersect_pa_counties(sensor_df):
     sensor_gdf, base_gdf = sensor_df_to_geo(df1, 'california', by='county')
     sensor_gdf = sensor_gdf.reset_index()
     sensor_gdf.to_csv(PATHS.data.purpleair / 'date_created_california_manual_request_2021-11-09_metadata.csv', index=False)
-
 
     sensor_gdf, base_gdf = sensor_df_to_geo(sensor_df, 'california', by='county')
     sensor_gdf = sensor_gdf.reset_index()
