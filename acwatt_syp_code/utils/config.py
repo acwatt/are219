@@ -68,6 +68,7 @@ class PurpleAirSettings:
     def __init__(self):
         self.read_key = '5498FF4F-1642-11EC-BAD6-42010A800017'
         self.write_key = '5499CF6C-1642-11EC-BAD6-42010A800017'
+        self.url = 'https://api.purpleair.com/v1/sensors'
 
 
 # FUNCTIONS --------------------------

@@ -11,7 +11,7 @@ from acwatt_syp_code.utils.config import PATHS
 
 if __name__ == "__main__":
     sensor_df = pad.load_current_sensor_data()
-    # sensor_gdf, base_gdf = am.sensor_df_to_geo(sensor_df, 'california')
+    sensor_gdf, base_gdf = am.sensor_df_to_geo(sensor_df, 'california')
 
-    # pad.download_in_geo_area(sensor_gdf, )
+    pad.dl_in_geo_area(sensor_gdf, start_date, num_weeks=10)
     am.make_all_sensor_maps(sensor_df)
