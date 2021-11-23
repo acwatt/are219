@@ -38,3 +38,7 @@ GET https://api.purpleair.com/v1/sensors?fields=sensor_index%2Cdate_created%2Cla
 X-API-Key: 5498FF4F-1642-11EC-BAD6-42010A800017
 
 
+'primary_id_a': 655100, 'primary_key_a': '2E6LYRAOFLQWQMIH',
+'secondary_id_a': 655101, 'secondary_key_a': 'GUIQIBMAGN82R0Z2',
+'primary_id_b': 655102, 'primary_key_b': 'JV99M0711JXVMPLE',
+'secondary_id_b': 655103, 'secondary_key_b': 'I7PBN8GHBIOV905B'}}
