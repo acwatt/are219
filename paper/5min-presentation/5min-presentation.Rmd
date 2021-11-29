@@ -7,6 +7,7 @@ output:
     includes:
       in_header: preamble.tex
 classoption: "aspectratio=169"
+knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = file.path(dirname(inputFile), 'acWatt_purpleair_5min-pres_2021-12-02.pdf')) })
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -216,6 +217,7 @@ during non-missing times will also be good predictors during missing times.
 
 ![PurpleAir correction equation for EPA monitor PM2.5 (RH = relative humidity, also measured by PA monitor)](PA_correction_equation.png){width=50%}
 
+Source: \url{https://www.epa.gov/air-sensor-toolbox/technical-approaches-sensor-data-airnow-fire-and-smoke-map}
 
 \beamerdefaultoverlayspecification{}
 # Appendix B: Data Plan
