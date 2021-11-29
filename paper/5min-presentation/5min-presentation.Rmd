@@ -12,7 +12,7 @@ knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = e
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tinytex)
-# Had to run tinytex::install_tinytex()
+# Had to run tinytex::install_tinytex() to use XeLaTeX if using YGbeamer.sty
 ```
 
 
