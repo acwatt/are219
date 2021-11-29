@@ -1,0 +1,2 @@
+docs and video about cassandra on AWS:
+https://aws.amazon.com/nosql/columnar/

@@ -1,0 +1,30 @@
+Costs for database:
+- approx memory requriements for 5 years, 30,000 sensors, 50 columns, 2 min intervals:
+30000×50×5×365×24×3600÷2÷2^20÷1024÷1024 = 107.55 Terabytes
+
+- costs for running Cassandra:
+($0.022/hr on t3a.small) * (8760 hrs/year) = $192.72
+ --> micro instances are free up to 750 hrs per month
+- hours required for downloading one week for 30,000 sensors:
+ --> takes 1 sec to download 1 week, per sensor
+30000÷3600 = 8.33 hours
+- hours per month for weekly download:
+8.33 hours * 4 weeks = 33.33 (well under the micro limit)
+
+- EBS General Purpose SSD (gp2) volumes:
+$0.12 per GB-month of provisioned storage
+($0.12/GB-month)*(1024GB/TB)*(107.55 TB) = $13,215.744 per month
+
+- S3 Standard pricing:
+First 50 TB / Month	$0.026 per GB
+Next 450 TB / Month	$0.025 per GB
+Over 500 TB / Month	$0.024 per GB
+($0.026/GB-month)*(1024GB/TB)*(107.55 TB) = $2,863.41 per month
+
+If I only stored mean and SD of hourly data
+- approx memory requriements for 5 years, 30,000 sensors, 100 columns, 1 hr intervals:
+30000×100×5×365×24÷2^20÷1024 = 122.38 GB
+- EBS costs:
+($0.12/GB-month)*(122.38 GB) = $14.69 per month
+- S3 costs:
+($0.026/GB-month)*(122.38 GB) = $3.19 per month

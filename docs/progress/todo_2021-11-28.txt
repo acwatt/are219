@@ -1,0 +1,12 @@
+1. draft slides
+2. overview slide: what's the distribution of bias in pollution data missing from EPA monitors (EPA attainment/regulatory ability + other policies and welfare analyses are based on EPA monitor data)
+3. lit review slide (Mu-Rubin-Zou, 
+3b. evidence for strategic behavior
+4. predictive EPA model
+5. bias model
+6. attainment model
+7. Empirical toy example
+8. data plan (datasets, calendar, datahub) hourly mean and SD $15/mo or $4/mo depending on storage medium
+9. extensions: measuring bias of spatial placement of EPA monitors, using PA to correct for missingness in space and time in EPA monitors
+
+
