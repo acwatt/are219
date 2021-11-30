@@ -1,2 +1,24 @@
 \setbeamertemplate{footline}[frame number]
+\setbeamertemplate{page number in head/foot}[framenumber]
 \beamerdefaultoverlayspecification{<+->}
+\usepackage{xpatch}
+
+% Set itemsep gloabally
+\xpatchcmd{\itemize}
+  {\def\makelabel}
+  {\setlength{\itemsep}{2ex}\def\makelabel}
+  {}
+  {}
+
+% Set beamer footer template
+% \setbeamertemplate{footline}
+% {%
+%   \leavevmode%
+%   \hbox{\begin{beamercolorbox}[wd=.5\paperwidth,ht=2.5ex,dp=1.125ex,leftskip=.3cm plus1fill,rightskip=.3cm]{author in head/foot}%
+%     \usebeamerfont{author in head/foot}\insertshortauthor
+%   \end{beamercolorbox}%
+%   \begin{beamercolorbox}[wd=.5\paperwidth,ht=2.5ex,dp=1.125ex,leftskip=.3cm,rightskip=.3cm plus1fil]{title in head/foot}%
+%     \usebeamerfont{title in head/foot}\insertshortinstitute
+%   \end{beamercolorbox}}%
+%   \vskip0pt%
+% }
