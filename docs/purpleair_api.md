@@ -21,13 +21,25 @@ The data from individual sensors will update no less than every 30 seconds. As a
 PurpleAir’s API can be viewed here. If you would like to use our API, you can request an API key at this email address. Again, thank you for reaching out to us about this. Please let us know if you have any additional questions, and enjoy the rest of your week!
 
 
-2021-11-09 query to web-api
+2021-11-29 query to web-api
+https://api.purpleair.com/#api-sensors-get-sensors-data
 read key: 5498FF4F-1642-11EC-BAD6-42010A800017
-fields: sensor_index,date_created,latitude,longitude,altitude,private,location_type,confidence_auto,channel_state,channel_flags,pm2.5,pm2.5_a,pm2.5_b,pm2.5_24hour,pm2.5_1week,humidity,temperature,pressure,voc,ozone1
+fields: sensor_index,date_created,latitude,longitude,altitude,private,location_type,confidence_auto,channel_state,channel_flags,pm2.5,pm2.5_a,pm2.5_b,pm2.5_24hour,pm2.5_1week,humidity,temperature,pressure,voc,ozone1,last_seen,last_modified
+
+For map:
+sensor_index,date_created,latitude,longitude,private,location_type,channel_state,last_seen,last_modified,position_rating
+
 location_type: 0
 max_age: 0
 nwlng: 
 
+US:
+nwlng: -165.379737
+nwlat: 71.301356
+selng: -67.019683
+selat: 19.070818
+
+California:
 nwlng: -124.96724575090495
 nwlat: 42.270281433624675
 selng: -112.18776576411574

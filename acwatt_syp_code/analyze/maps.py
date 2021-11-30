@@ -32,7 +32,8 @@ def sensor_df_to_geo(df, area, by=None):
         if area == 'us':
             base_gdf = (base_gdf
                 .loc[base_gdf.STATEFP.astype(int) < 60]
-                .loc[~base_gdf.NAME.isin(['Alaska', 'Hawaii'])])
+                # .loc[~base_gdf.NAME.isin(['Alaska', 'Hawaii'])]
+            )
         elif area == 'california':
             if by is None:
                 base_gdf = base_gdf.loc[base_gdf.NAME.isin(['California'])]
@@ -105,7 +106,8 @@ def weighted_average(df, data_col, weight_col, by_col):
 
 def culumative_time_plot(dpi=300):
     # Purple Air Data (date_created for all current california sensors)
-    date_file = PATHS.data.test_data / 'date_created_california_manual_request_2021-11-09.txt'
+    date_ = '2021-11-29'
+    date_file = PATHS.data.test_data / f'date_created_california_manual_request_{date_}.txt'
     dict_ = json.load(open(date_file,))
     df1 = (pd.DataFrame(dict_['data'], columns=dict_['fields'])
           .assign(date_start=lambda x: pd.to_datetime(x['date_created'], unit='s')))
@@ -168,11 +170,12 @@ def intersect_pa_counties(sensor_df):
     sensor_gdf = sensor_gdf.reset_index()
     sensor_gdf.to_csv(PATHS.data.purpleair / 'current_pa_sensors_metadata.csv', index=False)
 
+
 def make_all_sensor_maps(sensor_df):
-    intersect_pa_counties(sensor_df)
-    # for area in ['world', 'us', 'california', 'benton county']:
-    #     sensor_plot(sensor_df, area=area)
-    culumative_time_plot()
+    for area in ['world', 'us', 'california', 'benton county']:
+        sensor_plot(sensor_df, area=area)
+    # intersect_pa_counties(sensor_df)
+    # culumative_time_plot()
 
 
 

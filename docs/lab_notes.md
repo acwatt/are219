@@ -1,3 +1,10 @@
+# 2021-11-28
+Drafted the 5-min presentation. Much more material than I have time for, so I need to boil it down to just what Joe asked for and practice timing.
+
+Sent a copy of the long version to Meredith -- maybe she'll be able to get back to me?
+
+
+
 # 2021-11-02
 Unsure if python wrapper will properly bulk download the data -- don't want to make too many repeated requests or I might get blocked by the purpleair firewall
 
