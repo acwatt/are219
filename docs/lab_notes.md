@@ -1,3 +1,21 @@
+# 2021-11-30
+Deryugina: Wind speed and wind direction data for the years 1999–2013 are obtained from
+the North American Regional Reanalysis (NARR)
+
+temperature and precipitation data from Schlenker and Roberts
+(2009), which produces a daily weather grid using data from PRISM and weather
+stations.
+
+
+# 2021-11-29
+Added map of EPA 88101 EPA sensors and PA sensors.
+Version 1: select EPA monitors that have PA monitors within 50 miles and use model
+Version 2: use all PA monitors in ML prediction for all EPA monitors + wind speed and winddir at EPA site.
+
+Need to filter PA based on location stars.
+
+
+
 # 2021-11-28
 Drafted the 5-min presentation. Much more material than I have time for, so I need to boil it down to just what Joe asked for and practice timing.
 

@@ -1,5 +1,5 @@
 ---
-title: "Measuring bias in (strategically) missing EPA pollution data"
+title: "Estimation and Implications of Bias in EPA Pollution Measurement"
 author: Aaron C Watt
 date: December 2, 2021
 output:
@@ -30,15 +30,15 @@ library(ggplot2)
 ## Clean Air
 
 - The Clean Air Act (1970) established National Ambient Air Quality Standards
-(NAAQS) for US counties.
+(NAAQS) for US counties
 
-- Binary standards: either "attainment" or "non-attainment"
+- Either "attainment" or "non-attainment", \color{red}large penalties and costly restrictions
+
+- Minimum requirement of 75\% of readings, per quarter
     
-- Air quality can vary significantly throughout a day, week, quarter.
+- Air quality can change quickly
 
-- NAAQS only requires each monitor to report 75\% of their readings, per quarter.
-
-- EPA pollution monitors can be shut off for unreported reasons.
+- Monitor shutoffs are common
 
 <!-- - Annual and Daily standards that both must be met. -->
 
@@ -72,24 +72,35 @@ not about data-dependent outcomes.
 -->
 
 
-## Previous Works
-- Spotting Strategic Behavior in EPA Monitor Shutoffs:
-Mu et al. 2021
+## Previous Works in EPA Pollution Monitors
+
+**Satellite Data:**
+
+- Grainger et al. 2017
+- Sullivan, Krupnick 2018
+- Fowlie, Rubin, Walker 2019
+- Zou 2021
+
+**Location Pollution Alerts:**
+
+- Mu, Rubin, Zou 2021
+
+<!-- - Spotting Strategic Behavior in EPA Monitor Shutoffs: Mu, Rubin, Zou 2021 -->
 <!-- [ put more here on strategic behavior evidence that motivates the interest in measuring -->
 <!-- the size / distribution of bias in missing data/] -->
 
-- Strategic decisions of monitor locations: Grainger et al. 2017
+<!-- - Strategic decisions of monitor locations: Grainger et al. 2017 -->
 
-- Using satellite data to fill gaps in air pollution monitoring: Sullivan, Krupnick 2018
+<!-- - Using satellite data to fill gaps in air pollution monitoring: Sullivan, Krupnick 2018 -->
 
-- Prediction error is significant in satellite-based estimates of air pollution: Fowlie, Rubin, Walker 2019
+<!-- - Prediction error is significant in satellite-based estimates of air pollution: Fowlie, Rubin, Walker 2019 -->
 
 ## This project
 - Using new consumer-based pollution monitors (PurpleAir).
 
-- Focus on EPA pollution data that is missing *in time*.
-
 - Avoids using satellite estimates (has been shown to have significant error).
+
+- Focus on EPA pollution data that is missing *in time*, specifically PM2.5
 <!-- - Understanding the distribution of bias in missing California air pollution data using consumer-based pollution -->
 <!-- monitors that have low error near their location. -->
 
@@ -183,7 +194,7 @@ lonlat_country_filter <- function(df, lon_col, lat_col,
 
 
 
-# PM2.5 Air Pollution Monitors
+# Use PM2.5 Air Pollution Monitors to Predict Missing EPA Data
 
 ```{r get EPA sensor locations 2016, include=F, cache=T}
 sensor_types = c(88101, 88501, 88502)
@@ -358,22 +369,22 @@ list2env(lst, envir=.GlobalEnv)
 # Models: Predictive model of each EPA monitor PM2.5 pollution
 
 \[
-EPA_{i,t} = \gamma_{i,0} + \sum\limits_{j\in J_i}\sum\limits_{k=1}^7\gamma_{j,k} PA_{j,t} \cdot Winddir_{i,t,k} + u_{i,t}
+\alert<2>{EPA_{i,t}} = \gamma_{i,0} + \sum\limits_{j\in J_i}\sum\limits_{k=1}^7\gamma_{j,k} 
+\alert<3>{PA_{j,t}} \cdot \alert<4>{Winddir_{i,t,k}} + u_{i,t}
 \]
 
-- Analysis done at the month and quarter level; suppressing that subscript.
-
-- $t$ is a unique hour within a given month or quarter.
-
-- EPA monitor $i$ at time $t$ reads PM2.5 pollution $EPA_{i,t}$.
-
-- For each EPA monitor $i$, there are $J_i$ Purple Air monitors within a 10-mile radius.
-
-- Purple Air monitor $j\in J_i$ at time $t$ reads PM2.5 pollution $PA_{j,t}$.
+\begin{itemize}
+\item<1-> Analysis done at the month and quarter level; suppressing that subscript.
+\item<1-> $t$ is a unique hour within a given month or quarter.
+\item<1-> EPA monitor $i$ at time $t$ reads PM2.5 pollution \alert<2>{$EPA_{i,t}$}.
+\item<1-> For each EPA monitor $i$, there are $J_i$ Purple Air monitors within a 10-mile radius.
+\item<1-> Purple Air monitor $j\in J_i$ at time $t$ reads PM2.5 pollution \alert<3>{$PA_{j,t}$}.
+\item<1-> $\alert<4>{Winddir_{i,t,k}} $ is a wind direction indicator; 1 if the prevailing wind near station $i$ at time $t$ is in the $k^{th}$ bucket (of 8 buckets).
+\end{itemize}
 
 <!-- [insert diagram of two EPA monitors with PA monitors surrounding them] -->
 
-- $Winddir_{i,t,k}$ is a wind direction indicator; 1 if the prevailing wind near station $i$ at time $t$ is in the $k^{th}$ bucket (of 8 buckets).
+
 
 <!-- [insert diagram of one EPA monitor and surrounding PA monitors, with wind directions] -->
 
@@ -389,12 +400,12 @@ EPA_{i,t} = \gamma_{i,0} + \sum\limits_{j\in J_i}\sum\limits_{k=1}^7\gamma_{j,k}
 \begin{align*}
 \intertext{\textbf{Missingness Bias:}}
 Bias_{i,h,d} &= \frac{1}{|\nn_{i,h,d}|}\sum\limits_{t\in \nn_{i,h,d}}EPA_{i,t} 
-- \frac{1}{|\mm_{h,d}|}\sum\limits_{t\in \mm_{h,d}}\widehat{EPA}_{i,t}\\
+- \frac{1}{|\mm_{i,h,d}|}\sum\limits_{t\in \mm_{i,h,d}}\widehat{EPA}_{i,t}\\
 \text{where } \mm_{i,h,d}&= \{t: t\text{ is at hour $h$ and day $d$ and $EPA_{i,t}$ is Missing}\};\\
   \nn_{i,h,d}&= \{t: t\text{ is at hour $h$ and day $d$ and $EPA_{i,t}$ is Non-missing}\} \\
 \uncover<2->{\intertext{We can also define the \textbf{algorithm bias}     as the Hour-by-Day-of-week prediction error}
 \widetilde{Bias}_{i,h,d} &= \frac{1}{|\nn_{i,h,d}|}\sum\limits_{t\in \nn_{i,h,d}}EPA_{i,t} 
-- \frac{1}{|\nn_{h,d}|}\sum\limits_{t\in \nn_{h,d}}\widehat{EPA}_{i,t} \\}
+- \frac{1}{|\nn_{i,h,d}|}\sum\limits_{t\in \nn_{i,h,d}}\widehat{EPA}_{i,t} \\}
 \uncover<3->{\intertext{We can also define $Bias_{j,h,d}$ and $\widetilde{Bias}_{j,h,d}$ for PA monitor $j$ (we'll come back to this).}}
 \end{align*}
 
@@ -427,8 +438,8 @@ Bias_{i,h,d} &= \frac{1}{|\nn_{i,h,d}|}\sum\limits_{t\in \nn_{i,h,d}}EPA_{i,t}
 \begin{align*}
 Attain^{annual}_c &= 1 \text{ if \textbf{reported} annual average PM2.5 below 15.0 $\mu$g/m$^3$}^*\\[1em]
 Attain^{daily}_c &= 1 \text{ if 98$^{th}$ percentile of \textbf{reported} daily average PM2.5 below 35 $\mu$g/m$^3$}^*\\[1em]
-\widehat{Attain}^{annual}_c &= 1 \text{ if \textbf{predicted} annual average PM2.5 below threshold}^*\\[1em]
-\widehat{Attain}^{daily}_c &= 1 \text{ if 98$^{th}$ percentile of \textbf{predicted} daily average PM2.5 below threshold}^*
+\uncover<2->{\widehat{Attain}^{annual}_c &= 1 \text{ if \textbf{predicted} annual average PM2.5 below 15.0 $\mu$g/m$^3$}^*}\\[1em]
+\uncover<2->{\widehat{Attain}^{daily}_c &= 1 \text{ if 98$^{th}$ percentile of \textbf{predicted} daily average PM2.5 below 35 $\mu$g/m$^3$}^*}
 \end{align*}
 $^*$averaged over 3 years in NAAQS standard.
 [fill in equations and thresholds]
@@ -440,16 +451,24 @@ $^*$averaged over 3 years in NAAQS standard.
 
 
 
-# Identification Strategy
+# Identification
 
-- Direct causal link between reported pollution levels, attainment status, and
-regulatory penalties / attainment requirements
+\uncover<2->{\textbf{Is the missing pollution data identified?}}
 
-- Assumption: nearby PurpleAir monitors that are good predictors for EPA monitors
+\begin{itemize}
+\item<3-> Assumption: nearby PurpleAir monitors that are good predictors for EPA monitors
 during non-missing times will also be good predictors during missing times.
-
-  - Specifically, reasons for EPA data missingness are not correlated with missingness
+\item<3-> Specifically, reasons for EPA data missingness are not correlated with missingness
   or measurement error in PurpleAir data
+\end{itemize}
+
+
+\uncover<4->{\textbf{Are attainment status changes identified?}}
+
+\begin{itemize}
+\item<5-> Yes: simple rule based on pollution concentrations.
+\end{itemize}
+
 
 
 
@@ -462,9 +481,12 @@ during non-missing times will also be good predictors during missing times.
 
 - The $J_i$ group of PurpleAir sensors is (in a sense) a synthetic control for the EPA sensor $i$.
 
-- **The question of bias can be stated**: are the data observed during the times when the EPA monitor is turned off significantly different from the data observed when the monitor is turned on? Is it more different than by random chance?
+- **The question of bias in EPA monitor data can be stated**: is pollution concentration at
+the monitor during reported times
+significantly different from the concentration at
+the monitor at missing times? Is the difference greater than random variations?
 
-- Implies an Abadie et al. 2011 style permutation inference test for each EPA monitor $i$.
+- Implies an permutation inference test for each EPA monitor $i$.
 
 
 
@@ -475,13 +497,49 @@ during non-missing times will also be good predictors during missing times.
 
 # Proposed Statistical Test (Is the bias larger than by random chance?)
 
-- Calculate missingness bias and algorithm bias for the EPA monitor
+```{r Create bar plots, eval=F, include=F}
+library(RColorBrewer)
 
-- Pick PA monitor $j\in J_i$, temporarily remove data for original hours missing from EPA monitor ($\mm_{i,h,d}$).
+# create dummy data
+b = rgb(0.7,0.7,0.7)
+r = rgb(0.8,0.1,0.1)
+mm = "Missing"
+nn = "Reported"
+data1 <- data.frame(
+  hour=1:24,
+  value=sapply(1:24, function (x) rnorm(1, 20-0.05*(x-14)^2, 2)),
+  color=c(rep(b,15), rep(r,5), rep(b, 24-15-5)),
+  missing=c(rep(nn,15), rep(mm,5), rep(nn, 24-15-5))
+)
 
-- Construct similar placebo synthetic control for PA monitor $j$ (predict $\widehat{PA}_{j,t}$).
+data2 <- data.frame(
+  hour=1:24,
+  value=sapply(1:24, function (x) rnorm(1, 20-0.05*(x-14)^2, 2)),
+  color=c(rep(b,15), rep(r,5), rep(b, 24-15-5)),
+  missing=sample(c())  c(rep(nn,15), rep(mm,5), rep(nn, 24-15-5))
+)
 
-- Calculate missingness bias and algorithm bias for the PA monitor: $Bias_{j,h,d}$
+# Uniform color
+ggplot(data) +
+  geom_col(aes(x=hour, y=value, fill=missing)) +
+  scale_fill_manual(values = c(r,b)) +
+  xlab("Hour of day") +
+  ylab("PM2.5 Pollution") +
+  ggtitle("EPA Monitor") +
+  theme(text = element_text(size=20))
+barplot(height=data$value, names=data$hour, col=data$color, cex.names = 1.4,
+        cex.axis=1.5, cex=1.5, xlab="hour", ylab="PM2.5 Pollution", main="EPA Monitor")
+
+```
+
+
+- Calculate missingness bias and algorithm bias for the $i^{th}$ EPA monitor using $J_i$ PA monitors with $n_i$ missing hour observations.
+
+- Pick PA monitor $j\in J_i$, temporarily remove random $n_i$ hour observations.
+
+- Construct placebo synthetic control for PA monitor $j$ and predict $\widehat{PA}_{j,t}$.
+
+- Calculate missingness bias and algorithm bias for PA monitor $j$: $Bias_{j,h,d}$
 
 - Repeat for all PA sensors.
 
@@ -508,6 +566,8 @@ Because the denominator is larger if poor prediction in non-missing observations
 
 
 # Extensions
+
+- Use PurpleAir data to create population-weighted pollution measure $\implies$ counterfactual attainment.
 
 - Welfare analysis based on attainment status changes and required reductions in pollution.
 
