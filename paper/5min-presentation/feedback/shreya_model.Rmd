@@ -1,0 +1,73 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages}
+
+```
+
+
+Assume $X_{m,y}$ is AR(1) + random normal distribution
+```{r}
+library(tidyverse)
+library(magrittr)
+set.seed(1)
+# Define DGP parameters
+months = 12
+years = 2
+households = 4
+starting_x = 20
+rho = 0.8
+beta0 = 10
+beta1 = 1  # for every dollar of subsidy, we want one more unit of gas consumed
+# Generate household, month, year shocks (abosorbed by gamma fixed effects)
+e_h = comprehenr::to_vec(for(h in 1:(households)) rnorm(1))
+e_m = comprehenr::to_vec(for(h in 1:(months)) rnorm(1, mean=0, sd=2))
+e_y = comprehenr::to_vec(for(h in 1:(years)) rnorm(1, mean=-2, sd=2))
+# Generate the AR(1) subsidies
+X = arima.sim(model = list(order = c(1, 0, 0), ar = rho), n = months*years, sd=6) + 20
+plot(X)
+# Create dataframe
+df = data.frame(h = factor(comprehenr::to_vec(for (h in 1:households) for (y in 1:years) for (m in 1:months) h)),
+                y = factor(comprehenr::to_vec(for (h in 1:households) for (y in 1:years) for (m in 1:months) y)),
+                m = factor(comprehenr::to_vec(for (h in 1:households) for (y in 1:years) for (m in 1:months) m)),
+                X = comprehenr::to_vec(for (h in 1:households) X),
+                e_h = rep(e_h, each = months*years),
+                e_y = rep(e_y, each = months, times=households),
+                e_m = rep(e_m, times = households*years),
+                e_hmy = rnorm(n = households*months*years, mean = 0, sd = 0.5)) %>%
+    mutate(ym = paste0(y, '-', format(m, width=2)),
+           # Generate Outcomes Y
+           Y = beta0 + beta1*X + e_h + e_m + e_y + e_hmy)
+
+df %>%
+    ggplot() + geom_point(aes(x=X, y=Y, color = ym))
+
+# Regression
+df %>%
+    lm(Y ~ X + h + m + y, data=.)
+e_h
+e_m
+e_y
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
