@@ -374,12 +374,13 @@ list2env(lst, envir=.GlobalEnv)
 # Models: Predictive model of each EPA monitor PM2.5 pollution
 
 \[
-\alert<2>{EPA_{i,t}} = \gamma_{i,0} + \sum\limits_{j\in J_i}\sum\limits_{k=1}^7\gamma_{j,k} 
+\alert<2>{EPA_{i,t}} = \gamma_{i,0} + \sum\limits_{j\in J_i}\sum\limits_{k=1}^7\gamma_{i,j,k} 
 \alert<3>{PA_{j,t}} \cdot \alert<4>{Winddir_{i,t,k}} + u_{i,t}
 \]
 
 \begin{itemize}
-\item<1-> Analysis done at the month and quarter level; suppressing that subscript.
+\item<1-> Each EPA monitor $i$ has it's own set of weights for the PA sensors around it.
+\item<1-> Analysis done at the month and quarter level; suppressing quarter subscript.
 \item<1-> $t$ is a unique hour within a given month or quarter.
 \item<1-> EPA monitor $i$ at time $t$ reads PM2.5 pollution \alert<2>{$EPA_{i,t}$}.
 \item<1-> For each EPA monitor $i$, there are $J_i$ Purple Air monitors within a 10-mile radius.
