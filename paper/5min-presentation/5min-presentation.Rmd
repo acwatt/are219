@@ -7,7 +7,7 @@ output:
     includes:
       in_header: preamble.tex
 classoption: "aspectratio=169"
-knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = file.path(dirname(inputFile), 'acWatt_purpleair_5min-pres_2021-12-02.pdf')) })
+knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = file.path(dirname(inputFile), 'acWatt_purpleair_5min-pres_2021-12-15.pdf')) })
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -29,29 +29,26 @@ library(ggplot2)
 # Motivation
 ## Clean Air
 
-- The Clean Air Act (1970) established National Ambient Air Quality Standards
+\begin{itemize}
+\item<2-> The Clean Air Act (1970) established National Ambient Air Quality Standards
 (NAAQS) for US counties
-
-- Either "attainment" or "non-attainment", \color{red}large penalties and costly restrictions
-
-- Minimum requirement of 75\% of readings, per quarter
-    
-- Air quality can change quickly
-
-- Monitor shutoffs are common
+\item<2-> Either "attainment" or "non-attainment", \color{red}large penalties and costly restrictions
+\item<2-> Minimum requirement of 75\% of readings, per quarter
+\item<2-> Air quality can change quickly
+\item<2-> Monitor shutoffs are common
+\end{itemize}
 
 <!-- - Annual and Daily standards that both must be met. -->
 
 <!-- - Regulatory penalties levied on non-attainment areas can be large. -->
 
 ## Research Questions
-
-- How biased are EPA monitor-based measures of local air quality?
+\begin{itemize}
+\item<3-> How biased are EPA monitor-based measures of local air quality?
+\item<3-> Does this bias significantly change NAAQS attainment status?
+\end{itemize}
 <!-- - How biased are self-reported EPA pollution estimates? -->
 <!-- - How biased is *missing* air pollution data from self-reporting US EPA monitors? -->
-
-- Does this bias significantly change NAAQS attainment status?
-
 
 # Context
 <!-- :
@@ -74,16 +71,20 @@ not about data-dependent outcomes.
 
 ## Previous Works in EPA Pollution Monitors
 
-**Satellite Data:**
+\uncover<2->{**Satellite Data:**}
+\begin{itemize}
+\setlength{\itemsep}{0em}
+\item<2-> Grainger et al. 2017
+\item<2-> Sullivan, Krupnick 2018
+\item<2-> Fowlie, Rubin, Walker 2019
+\item<2-> Zou 2021
+\end{itemize}
 
-- Grainger et al. 2017
-- Sullivan, Krupnick 2018
-- Fowlie, Rubin, Walker 2019
-- Zou 2021
-
-**Location Pollution Alerts:**
-
-- Mu, Rubin, Zou 2021
+\uncover<3->{**Location Pollution Alerts:**
+\begin{itemize}
+\setlength{\itemsep}{0em}
+\item<3-> Mu, Rubin, Zou 2021
+\end{itemize}
 
 <!-- - Spotting Strategic Behavior in EPA Monitor Shutoffs: Mu, Rubin, Zou 2021 -->
 <!-- [ put more here on strategic behavior evidence that motivates the interest in measuring -->
@@ -95,12 +96,14 @@ not about data-dependent outcomes.
 
 <!-- - Prediction error is significant in satellite-based estimates of air pollution: Fowlie, Rubin, Walker 2019 -->
 
-## This project
-- Using new consumer-based pollution monitors (PurpleAir).
+\uncover<4->{## This project}
+\begin{itemize}
+%\setlength{\itemsep}{0em}
+\item<4-> Using new consumer-based pollution monitors (PurpleAir).
+\item<4-> Avoids using satellite estimates (has been shown to have significant error).
+\item<4-> Focus on EPA pollution data that is missing *in time*, specifically PM2.5
+\end{itemize}
 
-- Avoids using satellite estimates (has been shown to have significant error).
-
-- Focus on EPA pollution data that is missing *in time*, specifically PM2.5
 <!-- - Understanding the distribution of bias in missing California air pollution data using consumer-based pollution -->
 <!-- monitors that have low error near their location. -->
 
@@ -200,11 +203,13 @@ lonlat_country_filter <- function(df, lon_col, lat_col,
 sensor_types = c(88101, 88501, 88502)
 years = c()
 
-load("/media/a/E/Programming/github/are219/data/epa/epa_monitors/epa_monitors/data_from_api/88101/api_request_daily_88101_2016.Rdata")
+# The below data files are only on Aaron's desktop. Need to create another data submodule to host data
+# or host on s3 bucket and download from there
+load("../../data/epa/epa_monitors/epa_monitors/data_from_api/88101/api_request_daily_88101_2016.Rdata")
 df = yr_dt %>% distinct(latitude, longitude, .keep_all = TRUE) %>% mutate(type=88101, NAAQS_used='yes')
-load("/media/a/E/Programming/github/are219/data/epa/epa_monitors/epa_monitors/data_from_api/88501/api_request_daily_88501_2016.Rdata")
+load("../../data/epa/epa_monitors/epa_monitors/data_from_api/88501/api_request_daily_88501_2016.Rdata")
 df2 = yr_dt %>% distinct(latitude, longitude, .keep_all = TRUE) %>% mutate(type=88501, NAAQS_used='no')
-load("/media/a/E/Programming/github/are219/data/epa/epa_monitors/epa_monitors/data_from_api/88502/api_request_daily_88502_2016.Rdata")
+load("../../data/epa/epa_monitors/epa_monitors/data_from_api/88502/api_request_daily_88502_2016.Rdata")
 df3 = yr_dt %>% distinct(latitude, longitude, .keep_all = TRUE) %>% mutate(type=88502, NAAQS_used='no')
 epa_data = bind_rows(df, df2, df3) %>%
   filter(type == 88101) %>% 
@@ -214,7 +219,7 @@ epa_data = bind_rows(df, df2, df3) %>%
 ```
 
 ```{r get PA sensor locations all, include=F}
-result = jsonlite::fromJSON("/media/a/E/Programming/github/are219/data/test_data/manual_webpage_download_USmap_2021-11-29.txt")
+result = jsonlite::fromJSON("../../data/test_data/manual_webpage_download_USmap_2021-11-29.txt")
 library(zoo)
 # Get start and last_seen dates from all sensors near the US
 pa_data2 = as.data.frame(result$data) %>%
@@ -356,9 +361,9 @@ list2env(lst, envir=.GlobalEnv)
 # Models
 
 \begin{itemize}%[itemsep=1.5em]
-\item \textbf{Estimate missing pollution observations:} Use PurpleAir data to predict EPA pollution at missing times
-\item \textbf{Estimate bias of reported EPA pollution:} difference between predicted pollution at missing times and reported pollution at nonmissing times.
-\item \textbf{Estimate counties' counterfactual attainment status:} Include estimated missing pollution data.
+\item<2> \textbf{Estimate missing pollution observations:} Use PurpleAir data to predict EPA pollution at missing times
+\item<2> \textbf{Estimate bias of reported EPA pollution:} difference between predicted pollution at missing times and reported pollution at nonmissing times.
+\item<2> \textbf{Estimate counties' counterfactual attainment status:} Include estimated missing pollution data.
 \end{itemize}
 
 
