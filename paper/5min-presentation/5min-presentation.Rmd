@@ -286,7 +286,8 @@ ggplot() +
        subtitle = "Source: EPA 2016, PurpleAir.com 2015-2021") +
   ggthemes::theme_map()
 
-ggsave('monitor_map_2015-2021.png', width = 6, height = 4)
+p_map = 'monitor_map_2015-2021.png'
+ggsave(map_filename, width = 6, height = 4)
 
 ```
 
@@ -295,12 +296,11 @@ ggsave('monitor_map_2015-2021.png', width = 6, height = 4)
 ```{r Map and images, echo=F, warning=F, message=F, fig.width=12, fig.cap='test'}
 p_pa = "../../docs/purpleair/PA_outdoor_monitor_border.png"
 p_epa = "../../docs/epa/air-monitoring-site_border.jpg"
-p_map = 'monitor_map_2015-2021.png'
 library(png)
 library(jpeg)
 library(grid)
 library(gridExtra)
-img_map = rasterGrob(as.raster(readPNG(p_map)), interpolate = FALSE)
+img_map = rasterGrob(as.raster(readPNG(map_filename)), interpolate = FALSE)
 img1 <-  rasterGrob(as.raster(readPNG(p_pa)), interpolate = FALSE)
 img2 <-  rasterGrob(as.raster(readJPEG(p_epa)), interpolate = FALSE)
 
