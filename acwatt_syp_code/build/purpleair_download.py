@@ -43,7 +43,7 @@ def df_sensors():
     # Other sensor filters include 'outside', 'all', 'useful', 'family', and 'no_child'
     df = p.to_dataframe(sensor_filter='outside', channel='parent')
     # TODO: Cache and check if this has already been downloaded in past 7 days
-    #   if not, redownload and update the cache
+    #       if not, redownload and update the cache
     return df
 
 
@@ -55,8 +55,7 @@ def rest_csv_to_df(url, query):
 
 
 def pa_request(sensor_id):
-    # api_key = PA.read_key  # TODO: use this
-    api_key = '5498FF4F-1642-11EC-BAD6-42010A800017'
+    api_key = PA.read_key
     url = f'https://api.purpleair.com/v1/sensors/{sensor_id}'
     fields = 'name, date_created, last_modified, latitude, longitude, position_rating, ' \
              'pm2.5, primary_id_a, primary_key_a, secondary_id_a, secondary_key_a, ' \
@@ -115,8 +114,7 @@ def ts_example():
 
 def dl_sensor_list():
     """Download sensor metadata for california"""
-    # api_key = PA.read_key  # TODO: use this
-    api_key = '5498FF4F-1642-11EC-BAD6-42010A800017'
+    api_key = PA.read_key
     url = "https://api.purpleair.com/v1/sensors"
     fields = "sensor_index,date_created,latitude,longitude,altitude,position_rating,private,location_type,confidence_auto,channel_state,channel_flags,pm2.5,pm2.5_a,pm2.5_b,pm2.5_24hour,pm2.5_1week,humidity,temperature,pressure,voc,ozone1"
     query = {'api_key': api_key, 'fields': fields.replace(" ", ""),
