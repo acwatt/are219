@@ -1,0 +1,10 @@
+# Random questions I needed answers to for the lambda AWS service
+
+## Can lambda us python?
+
+Lambda natively supports Java, Go, PowerShell, Node.js, C#, Python, and Ruby code, and provides a Runtime API allowing you to use any additional programming languages to author your functions.[](https://aws.amazon.com/lambda/features/)
+
+
+## Can I get a different IP address when spawing multiple lambda instances?
+
+When you redeploy the lambda it seems to use a new container. So you can automate this deploy process using awscli to get a new ip on command.
