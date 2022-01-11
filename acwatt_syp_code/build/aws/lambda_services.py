@@ -70,15 +70,15 @@ def create_lambda_deployment_package(function_file_name):
 def create_iam_role_for_lambda(iam_resource, iam_role_name):
     """
     Creates an AWS Identity and Access Management (IAM) role that grants the
-    AWS Lambda function basic permission to run. If a role with the specified
-    name already exists, it is used for the demo.
+    AWS Lambda function basic permission to run S3 bucket reads and writes.
+    If a role with the specified name already exists, it is used.
 
     :param iam_resource: The Boto3 IAM resource object.
     :param iam_role_name: The name of the role to create.
     :return: The newly created role.
     """
     lambda_assume_role_policy = {
-        'Version': '2012-10-17',
+        'Version': '2022-01-01',
         'Statement': [
             {
                 'Effect': 'Allow',
@@ -89,7 +89,7 @@ def create_iam_role_for_lambda(iam_resource, iam_role_name):
             }
         ]
     }
-    policy_arn = 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+    policy_arn = 'arn:aws:iam::aws:policy/service-role/AmazonS3ObjectLambdaExecutionRolePolicy'
 
     try:
         role = iam_resource.create_role(
@@ -130,8 +130,8 @@ def deploy_lambda_function(
     try:
         response = lambda_client.create_function(
             FunctionName=function_name,
-            Description="AWS Lambda demo",
-            Runtime='python3.8',
+            Description="AWS Lambda demo for S3",
+            Runtime='python3.7',
             Role=iam_role.arn,
             Handler=handler_name,
             Code={'ZipFile': deployment_package},
@@ -187,13 +187,13 @@ def usage_demo():
     """
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     print('-'*88)
-    print("Welcome to the AWS Lambda basics demo.")
+    print("Welcome to the AWS Lambda demo for S3 bucket writes.")
     print('-'*88)
 
-    lambda_function_filename = 'lambda_handler_basic.py'
-    lambda_handler_name = 'lambda_handler_basic.lambda_handler'
+    lambda_function_filename = 'lambda_download_script.py'
+    lambda_handler_name = 'lambda_download_script.lambda_ip_s3_writer'
     lambda_role_name = 'demo-lambda-role'
-    lambda_function_name = 'demo-lambda-function'
+    lambda_function_name = 'demo-lambda-function-s3'
 
     iam_resource = boto3.resource('iam')
     lambda_client = boto3.client('lambda')
@@ -208,14 +208,15 @@ def usage_demo():
         deployment_package)
 
     print(f"Directly invoking function {lambda_function_name} a few times...")
-    actions = ['square', 'square root', 'increment', 'decrement']
-    for _ in range(5):
-        lambda_parms = {
-            'number': random.randint(1, 100), 'action': random.choice(actions)
-        }
+    sensors = [25999, 26003, 26005, 26011, 26013]
+    for i in range(5):
+        # lambda_parms = {
+        #     'number': random.randint(1, 100), 'action': random.choice(actions)
+        # }
+        lambda_params = {'sensor_id': sensors[i]}
         response = invoke_lambda_function(
-            lambda_client, lambda_function_name, lambda_parms)
-        print(f"The {lambda_parms['action']} of {lambda_parms['number']} resulted in "
+            lambda_client, lambda_function_name, lambda_params)
+        print(f"Downloading and saving of sensor {sensors[i]} resulted in "
               f"{json.load(response['Payload'])}")
 
     for policy in iam_role.attached_policies.all():
