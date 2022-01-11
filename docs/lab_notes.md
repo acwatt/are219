@@ -1,3 +1,11 @@
+# 2022-01-10
+- Creating algorithm map
+- Setup S3 bucket
+- Setup IAM user role to download and upload to S3 and create/use lambda service (to use from inside python controller script)
+- Create lambda service to copy that has python code in it. Or maybe just need .py file to run in lambda?
+- Test lambda service to download PA data and save to S3 bucket
+
+
 # 2021-11-30
 Deryugina: Wind speed and wind direction data for the years 1999–2013 are obtained from
 the North American Regional Reanalysis (NARR)

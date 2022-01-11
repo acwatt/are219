@@ -233,7 +233,11 @@ pa_data2 = as.data.frame(result$data) %>%
   lonlat_country_filter(lon_col='longitude', lat_col='latitude') %>%
   filter(private == 0,  # public sensor
          location_type == 0,  # outdoor sensor
-         channel_state != 0)  # has at least one PM sensor
+         channel_state == 3)  # has 2 PM sensors (so we can QA check)
+
+write.csv(pa_data2,
+          "../../data/test_data/manual_webpage_download_USmap_2021-11-29_filtered.csv",
+          row.names=F)
 ```
 
 
