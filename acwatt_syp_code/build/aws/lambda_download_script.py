@@ -109,6 +109,6 @@ def lambda_ip_s3_writer(params, bucket_dir = 'sensor_csvs'):
 """
 NOTES
 - test very simple IP address writer asap
-- 
+- need to determine how to make / break calls to get different IP addresses.
 
 """
