@@ -47,9 +47,6 @@ def upload_s3_csv(memcsv):
 
 
 def download_sensor(id_, date_beg, date_end):
-    # Get sensor's creation date and last modified date
-    date_beg, date_end = get_begin_end_dates(id_)
-
     # Get beginning and end dates of all weeks between creation and last modified
     weeks_tuple_list = get_all_week_dates(date_beg, date_end)
 
