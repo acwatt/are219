@@ -6,10 +6,16 @@
 PURPOSE:
 Writes IP address used during lambda function execution to S3 bucket CSV.
 """
-
+import io
 import logging
 import pandas as pd
 import datetime as dt
+import requests
+import json
+import os
+
+import boto3
+from botocore.exceptions import ClientError
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -64,10 +70,49 @@ def download_sensor(id_, date_beg, date_end):
     pass
 
 
+def get_ip():
+    """Return public IP address. From https://pytutorial.com/python-get-public-ip"""
+    endpoint = 'https://ipinfo.io/json'
+    response = requests.get(endpoint, verify = True)
+
+    if response.status_code != 200:
+        return f'Error status code: {response.status_code}'
+        exit()
+
+    data = response.json()
+    return data['ip']
+
+
+def upload_file(file_path, bucket, object_name=None):
+    """Upload a file to an S3 bucket
+
+    :param file_path: File to upload
+    :param bucket: Bucket to upload to
+    :param object_name: S3 object name. If not specified then file_name is used
+    :return: True if file was uploaded, else False
+    """
+    # If S3 object_name was not specified, use file_name
+    if object_name is None:
+        object_name = os.path.basename(file_path)
+
+    # Upload the file
+    s3_client = boto3.client('s3')
+    try:
+        response = s3_client.upload_file(file_path, bucket, object_name)
+    except ClientError as e:
+        logging.error(e)
+        return False
+    return True
+
+
 def ip_test(id_):
     # Get IP address
+    ip = get_ip()
     # Create df of IP address
-    # Create memCSV of df
+    df = pd.DataFrame({'ip_address': ip}, index=[id_])
+    # Save the df to a CSV that only exists in memory (not written to disk)
+    mem_csv = io.StringIO()
+    df.to_csv(mem_csv)
     # Write CSV to S3 bucket
     # Return success or error code
     pass
