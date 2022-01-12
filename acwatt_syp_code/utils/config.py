@@ -7,6 +7,8 @@
 
 # Built-in Imports
 from pathlib import Path
+import keyring
+import keyring.util.platform_ as keyring_platform
 
 
 # CLASSES --------------------------
@@ -66,16 +68,37 @@ class GISSettings:
 class PurpleAirSettings:
     """Class to hold settings for Purple Air API when downloading data."""
     def __init__(self):
-        self.read_key = '5498FF4F-1642-11EC-BAD6-42010A800017'
-        self.write_key = '5499CF6C-1642-11EC-BAD6-42010A800017'
         self.url = 'https://api.purpleair.com/v1/sensors'
+        namespace = "purpleair_api"
+        try:
+            self.read_key = keyring.get_credential(namespace, "read_key").password
+            # self.write_key = keyring.get_credential(namespace, "write_key").password
+            # Write key not used currently
+        except AttributeError:
+            self.read_key = input("Please paste your PurpleAir read key here\n"
+                               "This will be saved to your computer's encrypted keyring:")
+            keyring.set_password(namespace, "read_key", self.read_key)
+            # self.write_key = input("Please paste your PurpleAir write key here\n"
+            #                    "This will be saved to your computer's encrypted keyring:")
+            # keyring.set_password(namespace, "write_key", self.write_key)
 
 
 class AWSSettings:
     """Class to hold settings for Amazon AWS info."""
     def __init__(self):
+        namespace = "aws_purpleair_downloader"
         self.bucket_arn = 'arn:aws:s3:::purpleair-data'
-        self.access_key = "placeholder"
+        self.region = 'us-west-1'  # Northern CA
+        try:
+            self.access_key = keyring.get_credential(namespace, "access_key").password
+            self.secret_key = keyring.get_credential(namespace, "secret_key").password
+        except AttributeError:
+            self.access_key = input("Please paste your AWS IAM role access key here\n"
+                               "This will be saved to your computer's encrypted keyring:")
+            self.secret_key = input("Please paste your AWS IAM role secret key here\n"
+                               "This will be saved to your computer's encrypted keyring:")
+            keyring.set_password(namespace, "access_key", self.access_key)
+            keyring.set_password(namespace, "secret_key", self.secret_key)
 
 
 # FUNCTIONS --------------------------

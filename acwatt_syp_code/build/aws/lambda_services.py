@@ -199,6 +199,11 @@ def usage_demo():
     lambda_role_name = 'demo-lambda-role-S3-ip-upload'
     lambda_function_name = 'demo-lambda-function-s3'
 
+    session = boto3.Session(
+        region_name=AWS.region,
+        aws_access_key_id=AWS.access_key,
+        aws_secret_access_key=AWS.secret_key
+    )
     iam_resource = boto3.resource('iam')
     lambda_client = boto3.client('lambda')
 
