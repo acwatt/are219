@@ -52,7 +52,11 @@ reader = pd.read_csv(StringIO.StringIO(content))
 
 
 ## Pushing data to the bucket
-Say we have a CSV `00001.csv` in the `downloads` directory that we want to upload to the `PA_sensor_CSVs` folder in the S3 bucket named `purpleair_data`. To upload using the RESTful API, we will use a PUT request We can upload using this code:
+
+Say we have a CSV `00001.csv` in the `downloads` directory that we want to upload to the `PA_sensor_CSVs` folder in the
+S3 bucket named `purpleair_data`. To upload using the RESTful API, we will use a PUT request We can upload using this
+code:
+
 ```python
 import logging
 import boto3
