@@ -9,8 +9,10 @@ import pandas as pd
 import acwatt_syp_code.analyze.maps as am
 import acwatt_syp_code.build.purpleair_download as pad
 from acwatt_syp_code.utils.config import PATHS
+from acwatt_syp_code.build.aws import lambda_services
 
 if __name__ == "__main__":
+    lambda_services.usage_demo()
     # Get available sensor locations from  from purpleair.network.SensorList API wrapper
     # sensor_df = pad.load_current_sensor_data()
     # Get available sensor locations from thingsspeak API directly

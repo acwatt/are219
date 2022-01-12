@@ -105,20 +105,20 @@ def upload_file(file_path, bucket, object_name=None):
     return True
 
 
-def ip_test(id_):
+def ip_test(id_, bucket):
     # Get IP address
     ip = get_ip()
     # Create df of IP address
     df = pd.DataFrame({'ip_address': ip}, index=[id_])
     # Save the df to a CSV that only exists in memory (not written to disk)
     mem_csv = io.StringIO()
-    df.to_csv(mem_csv)
-    # Write CSV to S3 bucket
-    # Return success or error code
-    pass
+    df.to_csv(mem_csv, index=False)
+    mem_csv.seek(0)  # need to set position of buffer back to begging before reading
+    # Write CSV to S3 bucket (True/False for success/failure)
+    return upload_file(mem_csv, bucket, object_name=f'{id_:06d}.csv')
 
 
-def lambda_ip_s3_writer(params, bucket_dir = 'sensor_csvs'):
+def lambda_ip_s3_writer(params, bucket_dir='sensor_csvs'):
     """
     Accepts an action and a number, performs the specified action on the number,
     and returns the result.
@@ -129,11 +129,13 @@ def lambda_ip_s3_writer(params, bucket_dir = 'sensor_csvs'):
     :return: The result of the specified action.
     """
     id_ = params['sensor_id']
-    created_date = params['']
+    bucket = params['bucket_arn']
+    created_date = params['date_created']
+    last_modified = params['last_modified']
     filename = bucket_dir + f'/{id_}.csv'
     logger.info(f'Sensor: {id_}')
 
-    result = ip_test(id_)
+    result = "Success" if ip_test(id_, bucket) else "Failure"
     logger.info(f'Result of uploading IP CSV: {result}')
 
     # result = download_sensor(id_, params['date_created'], params['date_end'])

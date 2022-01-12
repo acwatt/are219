@@ -196,7 +196,7 @@ def usage_demo():
 
     lambda_function_filename = 'lambda_download_script.py'
     lambda_handler_name = 'lambda_download_script.lambda_ip_s3_writer'
-    lambda_role_name = 'demo-lambda-role'
+    lambda_role_name = 'demo-lambda-role-S3-ip-upload'
     lambda_function_name = 'demo-lambda-function-s3'
 
     iam_resource = boto3.resource('iam')
