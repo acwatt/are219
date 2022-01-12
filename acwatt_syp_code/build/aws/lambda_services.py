@@ -206,6 +206,10 @@ def usage_demo():
           f"{lambda_handler_name} function in {lambda_function_filename}...")
     deployment_package = create_lambda_deployment_package(lambda_function_filename)
     iam_role = create_iam_role_for_lambda(iam_resource, lambda_role_name)
+    # Could use the  GetFunctionConfiguration State "Active" response to wait until function is ready to envoke
+    # while state != "Active" and timer < max_try_time: ...
+    # Could use PutFunctionConcurrency to set concurrency to 1 if there are IP issues
+    # put lambda_client instantiation inside for loop to create new for each sensor
     exponential_retry(
         deploy_lambda_function, 'InvalidParameterValueException',
         lambda_client, lambda_function_name, lambda_handler_name, iam_role,
