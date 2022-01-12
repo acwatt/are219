@@ -19,6 +19,9 @@ import zipfile
 import boto3
 from botocore.exceptions import ClientError
 
+# Local imports
+from ...utils.config import PATHS, AWS
+
 logger = logging.getLogger(__name__)
 
 

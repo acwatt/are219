@@ -86,3 +86,4 @@ class AWSSettings:
 PATHS = Paths()
 GIS = GISSettings()
 PA = PurpleAirSettings()
+AWS = AWSSettings()
