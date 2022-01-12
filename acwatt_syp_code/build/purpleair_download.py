@@ -22,7 +22,6 @@ from timezonefinder import TimezoneFinder
 # Local imports
 from ..utils.config import PATHS, PA
 
-
 # If retrieving data from multiple sensors at once, please send a single request
 # rather than individual requests in succession.
 
@@ -205,8 +204,8 @@ def dl_sensor_weeks(sensor_id: Union[str, int, float] = None,
     # iterate through all different channels of data for sensor
     df_list = []
     print(f'\nDownloading for sensor {sensor_id}')
-    for i in reversed(range(len(date_list)-1)):
-        start, end = date_list[i: i+2].date
+    for i in reversed(range(len(date_list) - 1)):
+        start, end = date_list[i: i + 2].date
         # offset = daylight_savings_offset(start, timezone)
         print(f'. . Date Range: {start} - {end}')
         for channel in ['a', 'b']:
@@ -330,11 +329,11 @@ def sensorid_to_df(sensor_id):
         suffix = {'parent': '_1', 'child': '_2'}[channel]
         for k1 in dict_[channel]:
             for k2 in dict_[channel][k1]:
-                row_dict[k2+suffix] = [dict_[channel][k1][k2]]
+                row_dict[k2 + suffix] = [dict_[channel][k1][k2]]
     # Add created datetime column
     created_unix = dict_['parent']['diagnostic']['created']
     return (pd.DataFrame.from_dict(row_dict)
-          .assign(created_date=datetime.utcfromtimestamp(created_unix)))
+            .assign(created_date=dt.utcfromtimestamp(created_unix)))
 
 
 def load_current_sensor_data(update_lookup=True):
@@ -355,7 +354,7 @@ def update_loc_lookup(df, output=False):
     except FileNotFoundError:
         loc_lookup = pd.DataFrame(columns=loc_cols)
     # Update lookup
-    today = datetime.today().date().strftime('%Y-%m-%d')
+    today = dt.today().date().strftime('%Y-%m-%d')
     loc_lookup = (loc_lookup.merge(df
                                    .reset_index()
                                    .filter(loc_cols, axis=1),
