@@ -71,6 +71,13 @@ class PurpleAirSettings:
         self.url = 'https://api.purpleair.com/v1/sensors'
 
 
+class AWSSettings:
+    """Class to hold settings for Amazon AWS info."""
+    def __init__(self):
+        self.bucket_arn = 'arn:aws:s3:::purpleair-data'
+        self.access_key = "placeholder"
+
+
 # FUNCTIONS --------------------------
 
 
