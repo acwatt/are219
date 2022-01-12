@@ -10,6 +10,7 @@ Uses the AWS SDK for Python (Boto3) to create an AWS Lambda function from `lambd
 invoke it for a specific sensor ID, and delete it.
 """
 
+import datetime as dt
 import io
 import json
 import logging
@@ -212,14 +213,19 @@ def usage_demo():
 
     print(f"Directly invoking function {lambda_function_name} a few times...")
     sensors = [25999, 26003, 26005, 26011, 26013]
-    for i in range(5):
+    date_created_list = [1632955574, 1632955612, 1632955594, 1446763462, 1632955644]
+    last_modified_list = [1635632829, 1634149424, 1634410114, 1633665195, 1635632829]
+    for id_, date_created, last_modified in zip(sensors, date_created_list, last_modified_list):
         # lambda_parms = {
         #     'number': random.randint(1, 100), 'action': random.choice(actions)
         # }
-        lambda_params = {'sensor_id': sensors[i]}
+        lambda_params = {'sensor_id': id_,
+                         'bucket_arn': AWS.bucket_arn,
+                         'date_created': dt.utcfromtimestamp(date_created),
+                         'last_modified': dt.utcfromtimestamp(last_modified)}
         response = invoke_lambda_function(
             lambda_client, lambda_function_name, lambda_params)
-        print(f"Downloading and saving of sensor {sensors[i]} resulted in "
+        print(f"Downloading and saving of sensor {id_} resulted in "
               f"{json.load(response['Payload'])}")
 
     for policy in iam_role.attached_policies.all():
