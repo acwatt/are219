@@ -92,5 +92,3 @@ upload_file('downloads/00001.csv', 'purpleair_data')
 ```
 
 
-
-If I 
