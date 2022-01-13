@@ -22,7 +22,7 @@ logger.setLevel(logging.INFO)
 
 # Define a list of Python lambda functions that are called by this AWS Lambda function.
 
-
+# TODO: get list of weeks from lambda_services.py
 # def get_all_week_dates(date_beg, date_end):
 #     #
 #     date_list = pd.date_range(date_beg, date_end, freq='w')
@@ -110,6 +110,7 @@ def ip_test(id_, bucket):
     df = pd.DataFrame({'ip_address': ip}, index=[id_])
     # Save the df to a CSV that only exists in memory (not written to disk)
     mem_csv = io.StringIO()
+    # TODO: write txt instead
     df.to_csv(mem_csv, index=False)
     mem_csv.seek(0)  # need to set position of buffer back to begging before reading
     # Write CSV to S3 bucket (True/False for success/failure)
@@ -144,16 +145,14 @@ def lambda_ip_s3_writer(params, bucket_dir='sensor_csvs'):
     return response
 
 
-
-
-
-
 """
 NOTES
 - test very simple IP address writer asap
 - need to determine how to make / break calls to get different IP addresses.
 
-- Would like to figure out easy way of including pandas
+- Would like to figure out easy way of including pandas (and requests?)
+https://duckduckgo.com/?q=python+write+txt+file+in+memory+io.StringIO&t=newext
+
 - Need to remove pandas dependency:
     - Need to pass list of weeks to lambda function
     - write json files directly to S3 instead of turning to csvs
