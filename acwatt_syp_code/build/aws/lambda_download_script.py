@@ -8,7 +8,7 @@ Writes IP address used during lambda function execution to S3 bucket CSV.
 """
 import io
 import logging
-import pandas as pd
+# import pandas as pd
 import datetime as dt
 import requests
 import json
@@ -23,51 +23,49 @@ logger.setLevel(logging.INFO)
 # Define a list of Python lambda functions that are called by this AWS Lambda function.
 
 
-def get_all_week_dates(date_beg, date_end):
-    # Get
-    date_start = dt.datetime.strptime(date_beg, '%Y-%m-%d')
-    date_end = dt.datetime.strptime(date_end, '%Y-%m-%d')
-    date_list = pd.date_range(date_start, dt.datetime.today(), freq='w')
-    pass
-
-
-def download_sensor_week(id_, week_beg, week_end):
-    # construct REST call to ThingsSpeak API
-
-    # Download JSON response
-
-    # Convert JSON to dataframe
-
-    pass
-
-
-def write_df_to_memcsv(df):
-    # Create CSV of df in memory
-
-    pass
-
-
-def upload_s3_csv(memcsv):
-    # Write fileobject to S3 bucket
-    pass
-
-
-def download_sensor(id_, date_beg, date_end):
-    # Get beginning and end dates of all weeks between creation and last modified
-    weeks_tuple_list = get_all_week_dates(date_beg, date_end)
-
-    # For each week
-    df_list = []
-    for week_beg, week_end in weeks_tuple_list:
-        # Download the Purple Air sensor data to dataframe
-        df_list.append(download_sensor_week(id_, week_beg, week_end))
-
-    # Write df to CSV in memory
-    df = pd.concat(df_list)
-    write_df_to_memcsv(df)
-
-    # Write S3 file
-    pass
+# def get_all_week_dates(date_beg, date_end):
+#     #
+#     date_list = pd.date_range(date_beg, date_end, freq='w')
+#     pass
+#
+#
+# def download_sensor_week(id_, week_beg, week_end):
+#     # construct REST call to ThingsSpeak API
+#
+#     # Download JSON response
+#
+#     # Convert JSON to dataframe
+#
+#     pass
+#
+#
+# def write_df_to_memcsv(df):
+#     # Create CSV of df in memory
+#
+#     pass
+#
+#
+# def upload_s3_csv(memcsv):
+#     # Write fileobject to S3 bucket
+#     pass
+#
+#
+# def download_sensor(id_, date_beg, date_end):
+#     # Get beginning and end dates of all weeks between creation and last modified
+#     weeks_tuple_list = get_all_week_dates(date_beg, date_end)
+#
+#     # For each week
+#     df_list = []
+#     for week_beg, week_end in weeks_tuple_list:
+#         # Download the Purple Air sensor data to dataframe
+#         df_list.append(download_sensor_week(id_, week_beg, week_end))
+#
+#     # Write df to CSV in memory
+#     df = pd.concat(df_list)
+#     write_df_to_memcsv(df)
+#
+#     # Write S3 file
+#     pass
 
 
 def get_ip():
@@ -154,5 +152,11 @@ def lambda_ip_s3_writer(params, bucket_dir='sensor_csvs'):
 NOTES
 - test very simple IP address writer asap
 - need to determine how to make / break calls to get different IP addresses.
+
+- Would like to figure out easy way of including pandas
+- Need to remove pandas dependency:
+    - Need to pass list of weeks to lambda function
+    - write json files directly to S3 instead of turning to csvs
+    - write IP test to txt using io.StringIO
 
 """

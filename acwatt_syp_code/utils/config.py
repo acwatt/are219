@@ -87,9 +87,10 @@ class AWSSettings:
     """Class to hold settings for Amazon AWS info."""
     def __init__(self):
         namespace = "aws_purpleair_downloader"
-        self.bucket_arn = 'arn:aws:s3:::purpleair-data'
+        self.bucket_arn = 'arn:aws:s3:::purpleair-data/*'
         self.region = 'us-west-1'  # Northern CA
         try:
+            self.account_id = keyring.get_credential(namespace, "account_id").password
             self.access_key = keyring.get_credential(namespace, "access_key").password
             self.secret_key = keyring.get_credential(namespace, "secret_key").password
         except AttributeError:

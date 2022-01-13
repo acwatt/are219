@@ -14,6 +14,7 @@ import datetime as dt
 import io
 import json
 import logging
+import os
 import random
 import time
 import zipfile
@@ -64,14 +65,17 @@ def create_lambda_deployment_package(function_file_name):
                                function.
     :return: The deployment package.
     """
+    cwd = os.getcwd()
+    os.chdir(PATHS.code / 'build' / 'aws')
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, 'w') as zipped:
         zipped.write(function_file_name)
     buffer.seek(0)
+    os.chdir(cwd)
     return buffer.read()
 
 
-def create_iam_role_for_lambda(iam_resource, iam_role_name):
+def create_iam_role_for_lambda(iam_resource, iam_role_name, bucket_arn):
     """
     Creates an AWS Identity and Access Management (IAM) role that grants the
     AWS Lambda function basic permission to run S3 bucket reads and writes.
@@ -82,7 +86,7 @@ def create_iam_role_for_lambda(iam_resource, iam_role_name):
     :return: The newly created role.
     """
     lambda_assume_role_policy = {
-        'Version': '2022-01-01',
+        'Version': '2012-10-17',
         'Statement': [
             {
                 'Effect': 'Allow',
@@ -93,7 +97,20 @@ def create_iam_role_for_lambda(iam_resource, iam_role_name):
             }
         ]
     }
-    policy_arn = 'arn:aws:iam::aws:policy/service-role/AmazonS3ObjectLambdaExecutionRolePolicy'
+    s3_permissions_policy_doc = {
+        "Version": "2012-10-17",
+        "Statement": {
+            "Effect": "Allow",
+            "Action": "s3:PutObject",
+            "Resource": bucket_arn
+        }
+    }
+
+    policy_arn = 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+    # policy_arn = 'arn:aws:iam::aws:policy/service-role/AmazonS3ObjectLambdaExecutionRolePolicy'
+
+    # TODO: find policy ARN that can be applied to lambda functions allowing them
+    #   to write to S3 buckets
 
     try:
         role = iam_resource.create_role(
@@ -103,6 +120,13 @@ def create_iam_role_for_lambda(iam_resource, iam_role_name):
         logger.info("Created role %s.", role.name)
 
         role.attach_policy(PolicyArn=policy_arn)
+
+        # Create and attach S3 policy
+        s3_policy = iam_resource.create_policy(
+            PolicyName='myS3PutPolicy',
+            PolicyDocument=json.dumps(s3_permissions_policy_doc)
+        )
+        role.attach_policy(PolicyArn=s3_policy['Arn'])
         logger.info("Attached basic execution policy to role %s.", role.name)
     except ClientError as error:
         if error.response['Error']['Code'] == 'EntityAlreadyExists':
@@ -186,56 +210,77 @@ def invoke_lambda_function(lambda_client, function_name, function_params):
 
 
 def usage_demo():
-    """
-    Shows how to create, invoke, and delete an AWS Lambda function.
+    """Shows how to create, invoke, and delete an AWS Lambda function.
+
+    from: https://docs.aws.amazon.com/code-samples/latest/catalog/python-lambda-lambda_basics.py.html
     """
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     print('-'*88)
     print("Welcome to the AWS Lambda demo for S3 bucket writes.")
     print('-'*88)
 
-    lambda_function_filename = 'lambda_download_script.py'
+    lambda_function_filename = 'lambda_download_script.py'  #
     lambda_handler_name = 'lambda_download_script.lambda_ip_s3_writer'
     lambda_role_name = 'demo-lambda-role-S3-ip-upload'
     lambda_function_name = 'demo-lambda-function-s3'
 
-    session = boto3.Session(
-        region_name=AWS.region,
-        aws_access_key_id=AWS.access_key,
-        aws_secret_access_key=AWS.secret_key
-    )
-    iam_resource = boto3.resource('iam')
-    lambda_client = boto3.client('lambda')
+    # session = boto3.Session(
+    #     region_name=AWS.region,
+    #     aws_access_key_id=AWS.access_key,
+    #     aws_secret_access_key=AWS.secret_key
+    # )
+    iam_resource = boto3.resource('iam',
+                                  aws_access_key_id=AWS.access_key,
+                                  aws_secret_access_key=AWS.secret_key)
+    lambda_client = boto3.client('lambda',
+                                 region_name=AWS.region,
+                                 aws_access_key_id=AWS.access_key,
+                                 aws_secret_access_key=AWS.secret_key)
+    # aws_access_key_id=None, aws_secret_access_key=None,
+    #                aws_session_token=None
 
     print(f"Creating AWS Lambda function {lambda_function_name} from the "
           f"{lambda_handler_name} function in {lambda_function_filename}...")
     deployment_package = create_lambda_deployment_package(lambda_function_filename)
-    iam_role = create_iam_role_for_lambda(iam_resource, lambda_role_name)
-    # Could use the  GetFunctionConfiguration State "Active" response to wait until function is ready to envoke
-    # while state != "Active" and timer < max_try_time: ...
+    iam_role = create_iam_role_for_lambda(iam_resource, lambda_role_name, AWS.bucket_arn)
     # Could use PutFunctionConcurrency to set concurrency to 1 if there are IP issues
     # put lambda_client instantiation inside for loop to create new for each sensor
     exponential_retry(
         deploy_lambda_function, 'InvalidParameterValueException',
         lambda_client, lambda_function_name, lambda_handler_name, iam_role,
         deployment_package)
+    # Wait to make sure the function is active
+    lambda_client.get_waiter('function_active').wait(FunctionName=lambda_function_name)
+    # Could use the  GetFunctionConfiguration State "Active" response to wait until function is ready to envoke
+    # while state != "Active" and timer < max_try_time: ...
 
     print(f"Directly invoking function {lambda_function_name} a few times...")
     sensors = [25999, 26003, 26005, 26011, 26013]
     date_created_list = [1632955574, 1632955612, 1632955594, 1446763462, 1632955644]
     last_modified_list = [1635632829, 1634149424, 1634410114, 1633665195, 1635632829]
-    for id_, date_created, last_modified in zip(sensors, date_created_list, last_modified_list):
-        # lambda_parms = {
-        #     'number': random.randint(1, 100), 'action': random.choice(actions)
-        # }
-        lambda_params = {'sensor_id': id_,
-                         'bucket_arn': AWS.bucket_arn,
-                         'date_created': dt.utcfromtimestamp(date_created),
-                         'last_modified': dt.utcfromtimestamp(last_modified)}
-        response = invoke_lambda_function(
-            lambda_client, lambda_function_name, lambda_params)
-        print(f"Downloading and saving of sensor {id_} resulted in "
-              f"{json.load(response['Payload'])}")
+
+    id_, date_created, last_modified = 25999, 1632955574, 1635632829
+    lambda_params = {'sensor_id': id_,
+                     'bucket_arn': AWS.bucket_arn,
+                     'date_created': dt.datetime.utcfromtimestamp(date_created).strftime('%Y-%m-%d'),
+                     'last_modified': dt.datetime.utcfromtimestamp(last_modified).strftime('%Y-%m-%d')}
+    response = invoke_lambda_function(
+        lambda_client, lambda_function_name, lambda_params)
+    print(f"Downloading and saving of sensor {id_} resulted in "
+          f"{json.load(response['Payload'])}")
+
+    # for id_, date_created, last_modified in zip(sensors, date_created_list, last_modified_list):
+    #     # lambda_parms = {
+    #     #     'number': random.randint(1, 100), 'action': random.choice(actions)
+    #     # }
+    #     lambda_params = {'sensor_id': id_,
+    #                      'bucket_arn': AWS.bucket_arn,
+    #                      'date_created': dt.datetime.utcfromtimestamp(date_created).strftime('%Y-%m-%d'),
+    #                      'last_modified': dt.datetime.utcfromtimestamp(last_modified).strftime('%Y-%m-%d')}
+    #     response = invoke_lambda_function(
+    #         lambda_client, lambda_function_name, lambda_params)
+    #     print(f"Downloading and saving of sensor {id_} resulted in "
+    #           f"{json.load(response['Payload'])}")
 
     for policy in iam_role.attached_policies.all():
         policy.detach_role(RoleName=iam_role.name)
