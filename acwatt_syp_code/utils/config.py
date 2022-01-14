@@ -88,6 +88,7 @@ class AWSSettings:
     def __init__(self):
         namespace = "aws_purpleair_downloader"
         self.bucket_arn = 'arn:aws:s3:::purpleair-data/*'
+        self.bucket_name = 'purpleair-data'
         self.region = 'us-west-1'  # Northern CA
         try:
             self.account_id = keyring.get_credential(namespace, "account_id").password

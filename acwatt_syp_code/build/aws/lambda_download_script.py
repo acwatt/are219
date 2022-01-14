@@ -104,34 +104,34 @@ def upload_file(file_path, bucket, object_name=None):
 
 
 def ip_test(id_, bucket):
-    # Get IP address
     ip = get_ip()
-    # Create df of IP address
-    df = pd.DataFrame({'ip_address': ip}, index=[id_])
-    # Save the df to a CSV that only exists in memory (not written to disk)
-    mem_csv = io.StringIO()
-    # TODO: write txt instead
-    df.to_csv(mem_csv, index=False)
-    mem_csv.seek(0)  # need to set position of buffer back to begging before reading
+    filepath = f'/tmp/{id_:06d}.txt'
+    with open(filepath, 'w') as file:
+        file.write(ip)
+    # Save the IP address string to a file only in memory (not written to disk)
+    # mem_csv = io.StringIO()
+    # df.to_csv(mem_csv, index=False)
+    # file.seek(0)  # need to set position of buffer back to begging before reading
     # Write CSV to S3 bucket (True/False for success/failure)
-    return upload_file(mem_csv, bucket, object_name=f'{id_:06d}.csv')
+    return upload_file(filepath, bucket)
 
 
-def lambda_ip_s3_writer(params, bucket_dir='sensor_csvs'):
+def lambda_ip_s3_writer(params, lambda_context):
     """
     Accepts an action and a number, performs the specified action on the number,
     and returns the result.
 
     :param params: dict of dict that contains the parameters sent when the function
                   is invoked.
-    :param bucket_dir: str: folder to put the CSV of downloaded purple air sensor data in
+    :param lambda_context: The context in which the function is called. Not used,
+                           but required by Boto3-AWS-Lambda-client.invoke()
     :return: The result of the specified action.
     """
     id_ = params['sensor_id']
-    bucket = params['bucket_arn']
+    bucket = params['bucket_name']
     created_date = params['date_created']
     last_modified = params['last_modified']
-    filename = bucket_dir + f'/{id_}.csv'
+    filename = 'sensor_csvs' + f'/{id_}.csv'
     logger.info(f'Sensor: {id_}')
 
     result = "Success" if ip_test(id_, bucket) else "Failure"

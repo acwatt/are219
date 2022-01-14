@@ -116,18 +116,21 @@ def create_iam_role_for_lambda(iam_resource, iam_role_name, bucket_arn):
         role = iam_resource.create_role(
             RoleName=iam_role_name,
             AssumeRolePolicyDocument=json.dumps(lambda_assume_role_policy))
-        iam_resource.meta.client.get_waiter('role_exists').wait(RoleName=iam_role_name)
         logger.info("Created role %s.", role.name)
 
         role.attach_policy(PolicyArn=policy_arn)
+        logger.info("Attached basic execution policy to role %s.", role.name)
 
         # Create and attach S3 policy
         s3_policy = iam_resource.create_policy(
             PolicyName='myS3PutPolicy',
             PolicyDocument=json.dumps(s3_permissions_policy_doc)
         )
-        role.attach_policy(PolicyArn=s3_policy['Arn'])
-        logger.info("Attached basic execution policy to role %s.", role.name)
+        role.attach_policy(PolicyArn=s3_policy.arn)
+        logger.info(f"Attached {s3_policy.policy_name} policy to role {role.name}.")
+
+        logger.info(f"Waiting for modified role to be available...")
+        iam_resource.meta.client.get_waiter('policy_exists').wait(PolicyArn=s3_policy.arn)
     except ClientError as error:
         if error.response['Error']['Code'] == 'EntityAlreadyExists':
             role = iam_resource.Role(iam_role_name)
@@ -188,6 +191,21 @@ def delete_lambda_function(lambda_client, function_name):
         raise
 
 
+def delete_policy(iam_resource, policy_arn):
+    """
+    Deletes a policy.
+
+    :param iam_resource: The boto3 IAM resource used to create the policy.
+    :param policy_arn: The ARN of the policy to delete.
+    """
+    try:
+        iam_resource.Policy(policy_arn).delete()
+        logger.info("Deleted policy %s.", policy_arn)
+    except ClientError:
+        logger.exception("Couldn't delete policy %s.", policy_arn)
+        raise
+
+
 def invoke_lambda_function(lambda_client, function_name, function_params):
     """
     Invokes an AWS Lambda function.
@@ -224,11 +242,6 @@ def usage_demo():
     lambda_role_name = 'demo-lambda-role-S3-ip-upload'
     lambda_function_name = 'demo-lambda-function-s3'
 
-    # session = boto3.Session(
-    #     region_name=AWS.region,
-    #     aws_access_key_id=AWS.access_key,
-    #     aws_secret_access_key=AWS.secret_key
-    # )
     iam_resource = boto3.resource('iam',
                                   aws_access_key_id=AWS.access_key,
                                   aws_secret_access_key=AWS.secret_key)
@@ -254,20 +267,22 @@ def usage_demo():
     # Could use the  GetFunctionConfiguration State "Active" response to wait until function is ready to envoke
     # while state != "Active" and timer < max_try_time: ...
 
-    print(f"Directly invoking function {lambda_function_name} a few times...")
-    sensors = [25999, 26003, 26005, 26011, 26013]
-    date_created_list = [1632955574, 1632955612, 1632955594, 1446763462, 1632955644]
-    last_modified_list = [1635632829, 1634149424, 1634410114, 1633665195, 1635632829]
+    try:
+        print(f"Directly invoking function {lambda_function_name} a few times...")
+        sensors = [25999, 26003, 26005, 26011, 26013]
+        date_created_list = [1632955574, 1632955612, 1632955594, 1446763462, 1632955644]
+        last_modified_list = [1635632829, 1634149424, 1634410114, 1633665195, 1635632829]
 
-    id_, date_created, last_modified = 25999, 1632955574, 1635632829
-    lambda_params = {'sensor_id': id_,
-                     'bucket_arn': AWS.bucket_arn,
-                     'date_created': dt.datetime.utcfromtimestamp(date_created).strftime('%Y-%m-%d'),
-                     'last_modified': dt.datetime.utcfromtimestamp(last_modified).strftime('%Y-%m-%d')}
-    response = invoke_lambda_function(
-        lambda_client, lambda_function_name, lambda_params)
-    print(f"Downloading and saving of sensor {id_} resulted in "
-          f"{json.load(response['Payload'])}")
+        id_, date_created, last_modified = 25999, 1632955574, 1635632829
+        lambda_params = {'sensor_id': id_,
+                         'bucket_arn': AWS.bucket_arn,
+                         'bucket_name': AWS.bucket_name,
+                         'date_created': dt.datetime.utcfromtimestamp(date_created).strftime('%Y-%m-%d'),
+                         'last_modified': dt.datetime.utcfromtimestamp(last_modified).strftime('%Y-%m-%d')}
+        response = invoke_lambda_function(
+            lambda_client, lambda_function_name, lambda_params)
+        print(f"Downloading and saving of sensor {id_} resulted in "
+              f"{json.load(response['Payload'])}")
 
     # for id_, date_created, last_modified in zip(sensors, date_created_list, last_modified_list):
     #     # lambda_parms = {
@@ -282,14 +297,39 @@ def usage_demo():
     #     print(f"Downloading and saving of sensor {id_} resulted in "
     #           f"{json.load(response['Payload'])}")
 
-    for policy in iam_role.attached_policies.all():
-        policy.detach_role(RoleName=iam_role.name)
-    iam_role.delete()
-    print(f"Deleted role {lambda_role_name}.")
-    delete_lambda_function(lambda_client, lambda_function_name)
-    print(f"Deleted function {lambda_function_name}.")
+    finally:
+        for policy in iam_role.attached_policies.all():
+            policy.detach_role(RoleName=iam_role.name)
+            if policy.policy_name == 'myS3PutPolicy':
+                delete_policy(iam_resource, policy.arn)
+        iam_role.delete()
+        logger.info(f"Deleted role {lambda_role_name}.")
+        delete_lambda_function(lambda_client, lambda_function_name)
+        logger.info(f"Deleted function {lambda_function_name}.")
     print("Thanks for watching!")
 
 
 if __name__ == '__main__':
     usage_demo()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
