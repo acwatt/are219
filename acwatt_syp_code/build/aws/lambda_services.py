@@ -18,8 +18,11 @@ import os
 import random
 import time
 import zipfile
+
+# Third-party imports
 import boto3
 from botocore.exceptions import ClientError
+from ratelimiter import RateLimiter
 
 # Local imports
 from ...utils.config import PATHS, AWS
@@ -227,6 +230,103 @@ def invoke_lambda_function(lambda_client, function_name, function_params):
     return response
 
 
+@RateLimiter(max_calls=1, period=1)
+def start_lambda(lambda_params,
+                 lambda_client,
+                 lambda_function_name,
+                 lambda_handler_name,
+                 iam_role,
+                 deployment_package):
+    """"""
+    logger.info(f"Deploying sensor-specific lambda function for sensor "
+                f"{lambda_params['sensor_id']}")
+
+    # Keep trying to create the function until the role is available
+    exponential_retry(
+        deploy_lambda_function, 'InvalidParameterValueException',
+        lambda_client, lambda_function_name, lambda_handler_name, iam_role,
+        deployment_package)
+
+    # Wait to make sure the function is active
+    (lambda_client
+     .get_waiter('function_active')
+     .wait(FunctionName=lambda_function_name))
+
+    # Run the function!
+    logger.info(f"Directly invoking function {lambda_function_name}")
+    response = invoke_lambda_function(lambda_client,
+                                      lambda_function_name,
+                                      lambda_params)
+    result = json.load(response['Payload'])['result']
+    print(f"Downloading and saving of sensor {lambda_params['sensor_id']} resulted in {result}")
+
+
+def lambda_series(sensor_tuples):
+    """Start a lambda function for each id in id_list
+
+    For each id in id_list, start a uniquely-named function
+    @param sensor_tuples: list of tuples:
+        [0] Purple Air sensor id to download data for,
+        [1]
+    """
+    lambda_function_filename = 'lambda_download_script.py'  #
+    lambda_handler_name = 'lambda_download_script.lambda_ip_s3_writer'
+    lambda_role_name = 'demo-lambda-role-S3-ip-upload'
+
+    # Create AWS IAM resource instance
+    iam_resource = boto3.resource('iam',
+                                  aws_access_key_id=AWS.access_key,
+                                  aws_secret_access_key=AWS.secret_key)
+
+    # Create AWS Lambda client instance
+    lambda_client = boto3.client('lambda',
+                                 region_name=AWS.region,
+                                 aws_access_key_id=AWS.access_key,
+                                 aws_secret_access_key=AWS.secret_key)
+
+    # Create deployment package (lambda function code)
+    print(f"Creating generic AWS Lambda function from the "
+          f"{lambda_handler_name} function in {lambda_function_filename}...")
+    deployment_package = create_lambda_deployment_package(lambda_function_filename)
+
+    # Create AWS IAM Role (permissions to be given to lambda function)
+    iam_role = create_iam_role_for_lambda(iam_resource, lambda_role_name, AWS.bucket_arn)
+
+    try:
+        # Deploy a new Lambda function for each id
+        for sensor_tuple in sensor_tuples:
+            lambda_params = {'sensor_id': sensor_tuple[0],
+                             'bucket_name': AWS.bucket_name,
+                             'date_created': dt.datetime.utcfromtimestamp(sensor_tuple[1]).strftime('%Y-%m-%d'),
+                             'last_modified': dt.datetime.utcfromtimestamp(sensor_tuple[2]).strftime('%Y-%m-%d')}
+            lambda_function_name = f'PA_download_{lambda_params["sensor_id"]}'
+            start_lambda(lambda_params,
+                         lambda_client,
+                         lambda_function_name,
+                         lambda_handler_name,
+                         iam_role,
+                         deployment_package)
+
+    finally:
+        for policy in iam_role.attached_policies.all():
+            policy.detach_role(RoleName=iam_role.name)
+            if policy.policy_name == 'myS3PutPolicy':
+                delete_policy(iam_resource, policy.arn)
+        iam_role.delete()
+        logger.info(f"Deleted role {lambda_role_name}.")
+        delete_lambda_function(lambda_client, lambda_function_name)
+        logger.info(f"Deleted function {lambda_function_name}.")
+
+
+def save_pa_data_to_s3():
+    sensors = [25999, 26003, 26005, 26011, 26013]
+    date_created_list = [1632955574, 1632955612, 1632955594, 1446763462, 1632955644]
+    last_modified_list = [1635632829, 1634149424, 1634410114, 1633665195, 1635632829]
+    sensor_tuples = zip(sensors, date_created_list, last_modified_list)
+
+    lambda_series(sensor_tuples)
+
+
 def usage_demo():
     """Shows how to create, invoke, and delete an AWS Lambda function.
 
@@ -249,8 +349,6 @@ def usage_demo():
                                  region_name=AWS.region,
                                  aws_access_key_id=AWS.access_key,
                                  aws_secret_access_key=AWS.secret_key)
-    # aws_access_key_id=None, aws_secret_access_key=None,
-    #                aws_session_token=None
 
     print(f"Creating AWS Lambda function {lambda_function_name} from the "
           f"{lambda_handler_name} function in {lambda_function_filename}...")
@@ -264,8 +362,7 @@ def usage_demo():
         deployment_package)
     # Wait to make sure the function is active
     lambda_client.get_waiter('function_active').wait(FunctionName=lambda_function_name)
-    # Could use the  GetFunctionConfiguration State "Active" response to wait until function is ready to envoke
-    # while state != "Active" and timer < max_try_time: ...
+
 
     try:
         print(f"Directly invoking function {lambda_function_name} a few times...")
@@ -273,29 +370,26 @@ def usage_demo():
         date_created_list = [1632955574, 1632955612, 1632955594, 1446763462, 1632955644]
         last_modified_list = [1635632829, 1634149424, 1634410114, 1633665195, 1635632829]
 
-        id_, date_created, last_modified = 25999, 1632955574, 1635632829
-        lambda_params = {'sensor_id': id_,
-                         'bucket_arn': AWS.bucket_arn,
-                         'bucket_name': AWS.bucket_name,
-                         'date_created': dt.datetime.utcfromtimestamp(date_created).strftime('%Y-%m-%d'),
-                         'last_modified': dt.datetime.utcfromtimestamp(last_modified).strftime('%Y-%m-%d')}
-        response = invoke_lambda_function(
-            lambda_client, lambda_function_name, lambda_params)
-        print(f"Downloading and saving of sensor {id_} resulted in "
-              f"{json.load(response['Payload'])}")
+        # id_, date_created, last_modified = 25999, 1632955574, 1635632829
+        # lambda_params = {'sensor_id': id_,
+        #                  'bucket_arn': AWS.bucket_arn,
+        #                  'bucket_name': AWS.bucket_name,
+        #                  'date_created': dt.datetime.utcfromtimestamp(date_created).strftime('%Y-%m-%d'),
+        #                  'last_modified': dt.datetime.utcfromtimestamp(last_modified).strftime('%Y-%m-%d')}
+        # response = invoke_lambda_function(
+        #     lambda_client, lambda_function_name, lambda_params)
+        # result = json.load(response['Payload'])['result']
+        # print(f"Downloading and saving of sensor {id_} resulted in {result}")
 
-    # for id_, date_created, last_modified in zip(sensors, date_created_list, last_modified_list):
-    #     # lambda_parms = {
-    #     #     'number': random.randint(1, 100), 'action': random.choice(actions)
-    #     # }
-    #     lambda_params = {'sensor_id': id_,
-    #                      'bucket_arn': AWS.bucket_arn,
-    #                      'date_created': dt.datetime.utcfromtimestamp(date_created).strftime('%Y-%m-%d'),
-    #                      'last_modified': dt.datetime.utcfromtimestamp(last_modified).strftime('%Y-%m-%d')}
-    #     response = invoke_lambda_function(
-    #         lambda_client, lambda_function_name, lambda_params)
-    #     print(f"Downloading and saving of sensor {id_} resulted in "
-    #           f"{json.load(response['Payload'])}")
+        for id_, date_created, last_modified in zip(sensors, date_created_list, last_modified_list):
+            lambda_params = {'sensor_id': id_,
+                             'bucket_name': AWS.bucket_name,
+                             'date_created': dt.datetime.utcfromtimestamp(date_created).strftime('%Y-%m-%d'),
+                             'last_modified': dt.datetime.utcfromtimestamp(last_modified).strftime('%Y-%m-%d')}
+            response = invoke_lambda_function(
+                lambda_client, lambda_function_name, lambda_params)
+            result = json.load(response['Payload'])['result']
+            print(f"Downloading and saving of sensor {id_} resulted in {result}")
 
     finally:
         for policy in iam_role.attached_policies.all():

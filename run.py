@@ -12,7 +12,7 @@ from acwatt_syp_code.utils.config import PATHS
 from acwatt_syp_code.build.aws import lambda_services
 
 if __name__ == "__main__":
-    lambda_services.usage_demo()
+    lambda_services.save_pa_data_to_s3()
     # Get available sensor locations from  from purpleair.network.SensorList API wrapper
     # sensor_df = pad.load_current_sensor_data()
     # Get available sensor locations from thingsspeak API directly
