@@ -8,6 +8,7 @@
 # Built-in Imports
 from pathlib import Path
 import keyring
+import logging
 import keyring.util.platform_ as keyring_platform
 
 
@@ -90,6 +91,7 @@ class AWSSettings:
         self.bucket_arn = 'arn:aws:s3:::purpleair-data/*'
         self.bucket_name = 'purpleair-data'
         self.region = 'us-west-1'  # Northern CA
+        self.python_version = '3.9'
         try:
             self.account_id = keyring.get_credential(namespace, "account_id").password
             self.access_key = keyring.get_credential(namespace, "access_key").password
@@ -104,6 +106,9 @@ class AWSSettings:
 
 
 # FUNCTIONS --------------------------
+def start_log():
+    logging.getLogger().addHandler(logging.StreamHandler())
+    logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
 
 # MAIN -------------------------------
@@ -112,3 +117,4 @@ PATHS = Paths()
 GIS = GISSettings()
 PA = PurpleAirSettings()
 AWS = AWSSettings()
+start_log()

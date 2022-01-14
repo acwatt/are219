@@ -165,7 +165,7 @@ def deploy_lambda_function(
         response = lambda_client.create_function(
             FunctionName=function_name,
             Description="AWS Lambda demo for S3",
-            Runtime='python3.7',
+            Runtime=f'python{AWS.python_version}',
             Role=iam_role.arn,
             Handler=handler_name,
             Code={'ZipFile': deployment_package},
@@ -294,18 +294,22 @@ def lambda_series(sensor_tuples):
 
     try:
         # Deploy a new Lambda function for each id
-        for sensor_tuple in sensor_tuples:
-            lambda_params = {'sensor_id': sensor_tuple[0],
+        for sensor_id, date_created, last_modified in sensor_tuples:
+            lambda_params = {'sensor_id': sensor_id,
                              'bucket_name': AWS.bucket_name,
-                             'date_created': dt.datetime.utcfromtimestamp(sensor_tuple[1]).strftime('%Y-%m-%d'),
-                             'last_modified': dt.datetime.utcfromtimestamp(sensor_tuple[2]).strftime('%Y-%m-%d')}
-            lambda_function_name = f'PA_download_{lambda_params["sensor_id"]}'
+                             'date_created': dt.datetime.utcfromtimestamp(date_created).strftime('%Y-%m-%d'),
+                             'last_modified': dt.datetime.utcfromtimestamp(last_modified).strftime('%Y-%m-%d')}
+            lambda_function_name = f'PA_download_{sensor_id}'
             start_lambda(lambda_params,
                          lambda_client,
                          lambda_function_name,
                          lambda_handler_name,
                          iam_role,
                          deployment_package)
+
+    except:
+        print('FAILED')
+        logger.debug("\n"*10 + "="*80 + "\nFAILED\n" + "="*80 + "\n"*10)
 
     finally:
         for policy in iam_role.attached_policies.all():
@@ -314,19 +318,46 @@ def lambda_series(sensor_tuples):
                 delete_policy(iam_resource, policy.arn)
         iam_role.delete()
         logger.info(f"Deleted role {lambda_role_name}.")
-        delete_lambda_function(lambda_client, lambda_function_name)
-        logger.info(f"Deleted function {lambda_function_name}.")
+        for sensor_id, _, _ in sensor_tuples:
+            try:
+                lambda_function_name = f'PA_download_{sensor_id}'
+                delete_lambda_function(lambda_client, lambda_function_name)
+                logger.info(f"Deleted function {lambda_function_name}.")
+                print(f"deleted {lambda_function_name}")
+            except ClientError as error:
+                if error.response['Error']['Code'] == 'ResourceNotFoundException':
+                    print(f"{lambda_function_name} already deleted.")
+                else:
+                    raise
 
 
 def save_pa_data_to_s3():
     sensors = [25999, 26003, 26005, 26011, 26013]
     date_created_list = [1632955574, 1632955612, 1632955594, 1446763462, 1632955644]
     last_modified_list = [1635632829, 1634149424, 1634410114, 1633665195, 1635632829]
-    sensor_tuples = zip(sensors, date_created_list, last_modified_list)
+    sensor_tuples = [t for t in zip(sensors, date_created_list, last_modified_list)]
 
     lambda_series(sensor_tuples)
 
 
+
+
+
+
+"""
+NOTES:
+- run debug and try to find error -- looks like not finishing exponential_retry
+- Update lambda_download_script to download-upload actual PA data for a sensor
+- Test on 5 sensors
+- Split full list of sensors into 100 bins
+- Start 100 functions and pass bin of sensors to each
+
+
+
+"""
+################################################################################
+# ARCHIVE
+################################################################################
 def usage_demo():
     """Shows how to create, invoke, and delete an AWS Lambda function.
 
@@ -401,11 +432,6 @@ def usage_demo():
         delete_lambda_function(lambda_client, lambda_function_name)
         logger.info(f"Deleted function {lambda_function_name}.")
     print("Thanks for watching!")
-
-
-if __name__ == '__main__':
-    usage_demo()
-
 
 
 
