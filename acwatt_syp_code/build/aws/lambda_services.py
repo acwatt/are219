@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import random
+import requests
 import time
 import zipfile
 
@@ -76,6 +77,40 @@ def create_lambda_deployment_package(function_file_name):
     buffer.seek(0)
     os.chdir(cwd)
     return buffer.read()
+
+
+def get_package_arn(package_name):
+    """Use klayers API to get AWS lambda layer ARN of latest package (e.g. pandas)"""
+    endpoint = f'https://api.klayers.cloud/api/v1/layers/latest/us-west-1/{package_name}'
+    response = requests.get(endpoint, verify=True)
+    data = response.json()
+    return data['arn']
+
+
+def add_package_layers(function_name, lambda_client, package_name_list):
+    """Add a python package layer to the function for each package in list.
+
+    Use Klayers GitHub that hosts updated python-package lambda layers,
+        get ARN's for the most recent layers and update lambda function with
+        the layers corresponding to each ARN.
+    https://github.com/keithrozario/Klayers
+    @param function_name: str, name of lambda function to attach layers to
+    @param lambda_client: AWS lambda boto3.client used to create function
+    @param package_name_list: list of str's, names of packages (e.g. 'pandas')
+    """
+    print(f'Updating function {function_name} with package layers: {", ".join(package_name_list)}')
+    package_arn_list = [get_package_arn(package) for package in package_name_list]
+    lambda_client.update_function_configuration(FunctionName=function_name,
+                                                Layers=package_arn_list)
+
+    def updating():
+        config = lambda_client.get_function_configuration(FunctionName=function_name)
+        return config['LastUpdateStatus'] != 'Successful'
+
+    while updating():
+        print('*', end='')
+        time.sleep(1)
+    print(f'Function updated with package layers.')
 
 
 def create_iam_role_for_lambda(iam_resource, iam_role_name, bucket_arn):
@@ -255,6 +290,10 @@ def start_lambda(lambda_params,
     (lambda_client
      .get_waiter('function_active')
      .wait(FunctionName=lambda_function_name))
+
+    # Add dependencies (package layers to make the code runable)
+    package_name_list = ['numpy', 'pandas', 'requests']
+    add_package_layers(lambda_function_name, lambda_client, package_name_list)
 
     # Run the function!
     logger.info(f"Directly invoking function {lambda_function_name}")
