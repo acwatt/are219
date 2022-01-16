@@ -433,11 +433,9 @@ NOTES:
 - getting Access Denied from saving to S3. Something changed when I split lambda_series
     into smaller functions. Why does demo-lambda-role-S3-ip-upload not get deleted?
     --> manually deleting the S3 policy seemed to work
-- try using requests and save the json file
-- Use klayers API to get layer ARN of latest pandas and requests packages:
-    https://api.klayers.cloud/api/v1/layers/latest/us-west-1/{package}
+
 - Update lambda_download_script to download-upload actual PA data for a sensor
-- Test on 5 sensors
+- Test full download on 5 sensors
 - Split full list of sensors into 100 bins
 - Start 100 functions and pass bin of sensors to each
 
