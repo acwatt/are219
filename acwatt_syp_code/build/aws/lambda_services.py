@@ -152,14 +152,29 @@ def create_iam_role_for_lambda(iam_resource, iam_role_name, bucket_arn):
     # TODO: find policy ARN that can be applied to lambda functions allowing them
     #   to write to S3 buckets
 
-    try:
-        role = iam_resource.create_role(
+    def create_role():
+        role_ = iam_resource.create_role(
             RoleName=iam_role_name,
             AssumeRolePolicyDocument=json.dumps(lambda_assume_role_policy))
-        logger.info("Created role %s.", role.name)
+        logger.info("Created role %s.", role_.name)
 
-        role.attach_policy(PolicyArn=policy_arn)
-        logger.info("Attached basic execution policy to role %s.", role.name)
+        role_.attach_policy(PolicyArn=policy_arn)
+        logger.info("Attached basic execution policy to role %s.", role_.name)
+
+        # Create and attach S3 policy
+        s3_policy = iam_resource.create_policy(
+            PolicyName='myS3PutPolicy',
+            PolicyDocument=json.dumps(s3_permissions_policy_doc)
+        )
+        role_.attach_policy(PolicyArn=s3_policy.arn)
+        logger.info(f"Attached {s3_policy.policy_name} policy to role {role_.name}.")
+
+        logger.info(f"Waiting for modified role to be available...")
+        iam_resource.meta.client.get_waiter('policy_exists').wait(PolicyArn=s3_policy.arn)
+        return role_
+
+    try:
+        role = create_role()
 
         # Create and attach S3 policy
         s3_policy = iam_resource.create_policy(
@@ -174,7 +189,16 @@ def create_iam_role_for_lambda(iam_resource, iam_role_name, bucket_arn):
     except ClientError as error:
         if error.response['Error']['Code'] == 'EntityAlreadyExists':
             role = iam_resource.Role(iam_role_name)
-            logger.warning("The role %s already exists. Using it.", iam_role_name)
+            logger.warning("The role %s already exists. Deleting it.", iam_role_name)
+            # Delete
+            for policy in role.attached_policies.all():
+                policy.detach_role(RoleName=role.name)
+                if policy.policy_name == 'myS3PutPolicy':
+                    delete_policy(iam_resource, policy.arn)
+            role.delete()
+            # Wait for it to be deleted
+            # create new
+            role = create_role()
         else:
             logger.exception(
                 "Couldn't create role %s or attach policy %s.",
@@ -200,21 +224,34 @@ def deploy_lambda_function(
     @return function_arn: str, The Amazon Resource Name (ARN) of the newly
         created function.
     """
-    try:
-        response = lambda_client.create_function(
+
+    def create_function():
+        response = aws_objects['lambda_client'].create_function(
             FunctionName=function_name,
             Description="AWS Lambda demo for S3",
             Runtime=f'python{AWS.python_version}',
-            Role=iam_role.arn,
-            Handler=handler_name,
-            Code={'ZipFile': deployment_package},
+            Role=aws_objects['iam_role'].arn,
+            Handler=aws_objects['lambda_handler_name'],
+            Code={'ZipFile': aws_objects['deployment_package']},
             Publish=True)
-        function_arn = response['FunctionArn']
+        return response['FunctionArn']
+
+    try:
+        function_arn = create_function()
         logger.info("Created function '%s' with ARN: '%s'.",
-                    function_name, response['FunctionArn'])
-    except ClientError:
+                    function_name, function_arn)
+    except ClientError as error:
         logger.exception("Couldn't create function %s.", function_name)
-        raise
+        if error.response['Error']['Code'] == "ResourceConflictException":
+            logger.exception(f"Function {function_name} already exists; "
+                             f"deleting and creating new. Sleeping 10 sec.")
+            delete_lambda_function(aws_objects['lambda_client'], function_name)
+            time.sleep(20)
+            function_arn = create_function()
+            logger.info("Created function '%s' with ARN: '%s'.",
+                        function_name, function_arn)
+        else:
+            raise
     else:
         return function_arn
 
