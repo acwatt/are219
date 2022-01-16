@@ -36,11 +36,11 @@ def exponential_retry(func, error_code, *func_args, **func_kwargs):
     This is necessary when AWS is not yet ready to perform an action because all
     resources have not been fully deployed.
 
-    :param func: The function to retry.
-    :param error_code: The error code to retry. Other errors are raised again.
-    :param func_args: The positional arguments to pass to the function.
-    :param func_kwargs: The keyword arguments to pass to the function.
-    :return: The return value of the retried function.
+    @param func: The function to retry.
+    @param error_code: The error code to retry. Other errors are raised again.
+    @param func_args: The positional arguments to pass to the function.
+    @param func_kwargs: The keyword arguments to pass to the function.
+    @return: The return value of the retried function.
     """
     sleepy_time = 1
     func_return = None
@@ -64,9 +64,9 @@ def create_lambda_deployment_package(function_file_name):
     Creates a Lambda deployment package in ZIP format in an in-memory buffer. This
     buffer can be passed directly to AWS Lambda when creating the function.
 
-    :param function_file_name: The name of the file that contains the Lambda handler
+    @param function_file_name: The name of the file that contains the Lambda handler
                                function.
-    :return: The deployment package.
+    @return: The deployment package.
     """
     cwd = os.getcwd()
     os.chdir(PATHS.code / 'build' / 'aws')
@@ -84,9 +84,11 @@ def create_iam_role_for_lambda(iam_resource, iam_role_name, bucket_arn):
     AWS Lambda function basic permission to run S3 bucket reads and writes.
     If a role with the specified name already exists, it is used.
 
-    :param iam_resource: The Boto3 IAM resource object.
-    :param iam_role_name: The name of the role to create.
-    :return: The newly created role.
+    @param iam_resource: The Boto3 IAM resource object.
+    @param iam_role_name: The name of the role to create.
+    @param bucket_arn: str, Amazon Resource Name (ARN) of the bucket that the
+        lambda function will save data to.
+    @return: The newly created role.
     """
     lambda_assume_role_policy = {
         'Version': '2012-10-17',
@@ -152,14 +154,16 @@ def deploy_lambda_function(
     """
     Deploys the AWS Lambda function.
 
-    :param lambda_client: The Boto3 AWS Lambda client object.
-    :param function_name: The name of the AWS Lambda function.
-    :param handler_name: The fully qualified name of the handler function. This
-                         must include the file name and the function name.
-    :param iam_role: The IAM role to use for the function.
-    :param deployment_package: The deployment package that contains the function
+    @param aws_objects: dict of AWS objects:
+        - lambda_client: The Boto3 AWS Lambda client object.
+        - iam_role: The IAM role to use for the function.
+        - deployment_package: The deployment package that contains the function
                                code in ZIP format.
-    :return: The Amazon Resource Name (ARN) of the newly created function.
+    @param function_name: The name of the AWS Lambda function.
+    @param handler_name: The fully qualified name of the handler function. This
+                         must include the file name and the function name.
+    @return function_arn: str, The Amazon Resource Name (ARN) of the newly
+        created function.
     """
     try:
         response = lambda_client.create_function(
@@ -184,8 +188,8 @@ def delete_lambda_function(lambda_client, function_name):
     """
     Deletes an AWS Lambda function.
 
-    :param lambda_client: The Boto3 AWS Lambda client object.
-    :param function_name: The name of the function to delete.
+    @param lambda_client: The Boto3 AWS Lambda client object.
+    @param function_name: The name of the function to delete.
     """
     try:
         lambda_client.delete_function(FunctionName=function_name)
@@ -198,8 +202,8 @@ def delete_policy(iam_resource, policy_arn):
     """
     Deletes a policy.
 
-    :param iam_resource: The boto3 IAM resource used to create the policy.
-    :param policy_arn: The ARN of the policy to delete.
+    @param iam_resource: The boto3 IAM resource used to create the policy.
+    @param policy_arn: The ARN of the policy to delete.
     """
     try:
         iam_resource.Policy(policy_arn).delete()
@@ -213,11 +217,11 @@ def invoke_lambda_function(lambda_client, function_name, function_params):
     """
     Invokes an AWS Lambda function.
 
-    :param lambda_client: The Boto3 AWS Lambda client object.
-    :param function_name: The name of the function to invoke.
-    :param function_params: The parameters of the function as a dict. This dict
+    @param lambda_client: The Boto3 AWS Lambda client object.
+    @param function_name: The name of the function to invoke.
+    @param function_params: The parameters of the function as a dict. This dict
                             is serialized to JSON before it is sent to AWS Lambda.
-    :return: The response from the function invocation.
+    @return: The response from the function invocation.
     """
     try:
         response = lambda_client.invoke(
