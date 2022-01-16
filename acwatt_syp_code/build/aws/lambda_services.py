@@ -337,7 +337,7 @@ def start_lambda(lambda_params,
     response = invoke_lambda_function(lambda_client,
                                       lambda_function_name,
                                       lambda_params)
-    result = json.load(response['Payload'])['result']
+    result = json.load(response['Payload'])
     print(f"Downloading and saving of sensor {lambda_params['sensor_id']} resulted in {result}")
 
 
