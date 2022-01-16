@@ -176,16 +176,6 @@ def create_iam_role_for_lambda(iam_resource, iam_role_name, bucket_arn):
     try:
         role = create_role()
 
-        # Create and attach S3 policy
-        s3_policy = iam_resource.create_policy(
-            PolicyName='myS3PutPolicy',
-            PolicyDocument=json.dumps(s3_permissions_policy_doc)
-        )
-        role.attach_policy(PolicyArn=s3_policy.arn)
-        logger.info(f"Attached {s3_policy.policy_name} policy to role {role.name}.")
-
-        logger.info(f"Waiting for modified role to be available...")
-        iam_resource.meta.client.get_waiter('policy_exists').wait(PolicyArn=s3_policy.arn)
     except ClientError as error:
         if error.response['Error']['Code'] == 'EntityAlreadyExists':
             role = iam_resource.Role(iam_role_name)
@@ -208,8 +198,7 @@ def create_iam_role_for_lambda(iam_resource, iam_role_name, bucket_arn):
     return role
 
 
-def deploy_lambda_function(
-        lambda_client, function_name, handler_name, iam_role, deployment_package):
+def deploy_lambda_function(aws_objects, function_name):
     """
     Deploys the AWS Lambda function.
 
@@ -307,12 +296,9 @@ def invoke_lambda_function(lambda_client, function_name, function_params):
 
 
 @RateLimiter(max_calls=1, period=1)
-def start_lambda(lambda_params,
-                 lambda_client,
-                 lambda_function_name,
-                 lambda_handler_name,
-                 iam_role,
-                 deployment_package):
+def start_lambda(aws_objects,
+                 lambda_params,
+                 lambda_function_name):
     """"""
     logger.info(f"Deploying sensor-specific lambda function for sensor "
                 f"{lambda_params['sensor_id']}")
@@ -320,10 +306,10 @@ def start_lambda(lambda_params,
     # Keep trying to create the function until the role is available
     exponential_retry(
         deploy_lambda_function, 'InvalidParameterValueException',
-        lambda_client, lambda_function_name, lambda_handler_name, iam_role,
-        deployment_package)
+        aws_objects, lambda_function_name)
 
     # Wait to make sure the function is active
+    lambda_client = aws_objects['lambda_client']
     (lambda_client
      .get_waiter('function_active')
      .wait(FunctionName=lambda_function_name))
@@ -341,18 +327,7 @@ def start_lambda(lambda_params,
     print(f"Downloading and saving of sensor {lambda_params['sensor_id']} resulted in {result}")
 
 
-def lambda_series(sensor_tuples):
-    """Start a lambda function for each id in id_list
-
-    For each id in id_list, start a uniquely-named function
-    @param sensor_tuples: list of tuples:
-        [0] Purple Air sensor id to download data for,
-        [1]
-    """
-    lambda_function_filename = 'lambda_download_script.py'  #
-    lambda_handler_name = 'lambda_download_script.lambda_ip_s3_writer'
-    lambda_role_name = 'demo-lambda-role-S3-ip-upload'
-
+def setup_aws_objects(function_filename, role_name):
     # Create AWS IAM resource instance
     iam_resource = boto3.resource('iam',
                                   aws_access_key_id=AWS.access_key,
@@ -365,50 +340,78 @@ def lambda_series(sensor_tuples):
                                  aws_secret_access_key=AWS.secret_key)
 
     # Create deployment package (lambda function code)
-    print(f"Creating generic AWS Lambda function from the "
-          f"{lambda_handler_name} function in {lambda_function_filename}...")
-    deployment_package = create_lambda_deployment_package(lambda_function_filename)
+    print(f"Creating generic AWS Lambda function from {function_filename}.")
+    deployment_package = create_lambda_deployment_package(function_filename)
 
     # Create AWS IAM Role (permissions to be given to lambda function)
-    iam_role = create_iam_role_for_lambda(iam_resource, lambda_role_name, AWS.bucket_arn)
+    iam_role = create_iam_role_for_lambda(iam_resource, role_name, AWS.bucket_arn)
+    print('Sleeping for 10 to let the role propagate'); time.sleep(10);
+    aws_objects = {'iam_resource': iam_resource,
+                   'lambda_client': lambda_client,
+                   'deployment_package': deployment_package,
+                   'iam_role': iam_role}
+    return aws_objects
 
-    try:
-        # Deploy a new Lambda function for each id
-        for sensor_id, date_created, last_modified in sensor_tuples:
-            lambda_params = {'sensor_id': sensor_id,
-                             'bucket_name': AWS.bucket_name,
-                             'date_created': dt.datetime.utcfromtimestamp(date_created).strftime('%Y-%m-%d'),
-                             'last_modified': dt.datetime.utcfromtimestamp(last_modified).strftime('%Y-%m-%d')}
-            lambda_function_name = f'PA_download_{sensor_id}'
-            start_lambda(lambda_params,
-                         lambda_client,
-                         lambda_function_name,
-                         lambda_handler_name,
-                         iam_role,
-                         deployment_package)
 
-    except:
-        print('FAILED')
-        logger.debug("\n"*10 + "="*80 + "\nFAILED\n" + "="*80 + "\n"*10)
+def teardown_aws_objects(aws_objects, function_list):
+    # Delete all roles
+    iam_role = aws_objects['iam_role']
+    for policy in iam_role.attached_policies.all():
+        policy.detach_role(RoleName=iam_role.name)
+        if policy.policy_name == 'myS3PutPolicy':
+            delete_policy(aws_objects['iam_resource'], policy.arn)
+    iam_role.delete()
+    logger.info(f"Deleted role {iam_role.name}.")
 
-    finally:
-        for policy in iam_role.attached_policies.all():
-            policy.detach_role(RoleName=iam_role.name)
-            if policy.policy_name == 'myS3PutPolicy':
-                delete_policy(iam_resource, policy.arn)
-        iam_role.delete()
-        logger.info(f"Deleted role {lambda_role_name}.")
-        for sensor_id, _, _ in sensor_tuples:
-            try:
-                lambda_function_name = f'PA_download_{sensor_id}'
-                delete_lambda_function(lambda_client, lambda_function_name)
-                logger.info(f"Deleted function {lambda_function_name}.")
-                print(f"deleted {lambda_function_name}")
-            except ClientError as error:
-                if error.response['Error']['Code'] == 'ResourceNotFoundException':
-                    print(f"{lambda_function_name} already deleted.")
-                else:
-                    raise
+    # Delete all functions
+    for function in function_list:
+        try:
+            delete_lambda_function(aws_objects['lambda_client'], function)
+            logger.info(f"Deleted function {function}.")
+            print(f"deleted {function}")
+        except ClientError as error:
+            if error.response['Error']['Code'] == 'ResourceNotFoundException':
+                print(f"{function} already deleted.")
+            else:
+                raise
+
+
+def start_function(sensor_tuple, aws_objects):
+    sensor_id, date_created, last_modified = sensor_tuple
+    lambda_params = {'sensor_id': sensor_id,
+                     'bucket_name': AWS.bucket_name,
+                     'date_created': dt.datetime.utcfromtimestamp(date_created).strftime('%Y-%m-%d'),
+                     'last_modified': dt.datetime.utcfromtimestamp(last_modified).strftime('%Y-%m-%d')}
+    lambda_function_name = f'PA_download_{sensor_id}'
+    start_lambda(aws_objects,
+                 lambda_params,
+                 lambda_function_name)
+    print('SUCCESS:', lambda_function_name)
+    return lambda_function_name
+
+
+def lambda_series(sensor_tuples):
+    """Start a lambda function for each id in id_list
+
+    For each id in id_list, start a uniquely-named function
+    @param sensor_tuples: list of tuples:
+        [0] Purple Air sensor id to download data for,
+        [1]
+    """
+    # Setup AWS objects
+    lambda_function_filename = 'lambda_download_script.py'
+    lambda_role_name = 'demo-lambda-role-S3-ip-upload'
+    aws_objects = setup_aws_objects(lambda_function_filename, lambda_role_name)
+    aws_objects['lambda_handler_name'] = 'lambda_download_script.lambda_ip_s3_writer'
+
+    # Deploy a new Lambda function for each id
+    function_list = []
+    for s in sensor_tuples:
+        function_list.append(start_function(s, aws_objects))
+    # function_list = [f'PA_download_{s}' for s, _, _ in sensor_tuples]
+
+    # Delete all roles and functions
+    teardown_aws_objects(aws_objects, function_list)
 
 
 def save_pa_data_to_s3():
@@ -418,6 +421,7 @@ def save_pa_data_to_s3():
     sensor_tuples = [t for t in zip(sensors, date_created_list, last_modified_list)]
 
     lambda_series(sensor_tuples)
+    print('DONE WITH SAVING PURPLE AIR DATA')
 
 
 
