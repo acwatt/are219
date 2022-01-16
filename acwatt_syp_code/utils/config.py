@@ -91,7 +91,8 @@ class AWSSettings:
         self.bucket_arn = 'arn:aws:s3:::purpleair-data/*'
         self.bucket_name = 'purpleair-data'
         self.region = 'us-west-1'  # Northern CA
-        self.python_version = '3.9'
+        self.python_version = '3.8'
+
         try:
             self.account_id = keyring.get_credential(namespace, "account_id").password
             self.access_key = keyring.get_credential(namespace, "access_key").password
