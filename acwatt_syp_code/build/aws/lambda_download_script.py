@@ -8,7 +8,7 @@ Writes IP address used during lambda function execution to S3 bucket CSV.
 """
 import io
 import logging
-# import pandas as pd
+import pandas as pd
 import datetime as dt
 import requests
 import json
@@ -105,9 +105,11 @@ def upload_file(file_path, bucket, object_name=None):
 
 def ip_test(id_, bucket):
     ip = get_ip()
-    filepath = f'/tmp/{id_:06d}.txt'
-    with open(filepath, 'w') as file:
-        file.write(ip)
+    df = pd.DataFrame({'ip': ip}, index=[id_])
+    filepath = f'/tmp/{id_:06d}.csv'
+    df.to_csv(filepath)
+    # with open(filepath, 'w') as file:
+    #     file.write(ip)
     # Save the IP address string to a file only in memory (not written to disk)
     # mem_csv = io.StringIO()
     # df.to_csv(mem_csv, index=False)
