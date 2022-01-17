@@ -47,7 +47,7 @@ def rest_csv_to_df(url, query):
     return df
 
 
-def pa_request(sensor_id):
+def pa_request_single_sensor(sensor_id):
     api_key = PA.read_key
     url = f'https://api.purpleair.com/v1/sensors/{sensor_id}'
     fields = 'name, date_created, last_modified, latitude, longitude, position_rating, ' \
@@ -105,7 +105,7 @@ def ts_example():
     return df
 
 
-def dl_sensor_list():
+def dl_sensor_list_latlon_extent():
     """Download sensor metadata for california"""
     api_key = PA.read_key
     url = "https://api.purpleair.com/v1/sensors"
@@ -190,7 +190,7 @@ def dl_sensor_weeks(sensor_id: Union[str, int, float] = None,
     sensor_id = int(sensor_id)
     # todo: use info['latitude'], lon, to update dataframe of sensor
     #       see load_current_sensor_data() and update_loc_lookup()
-    info = pa_request(sensor_id)['sensor']
+    info = pa_request_single_sensor(sensor_id)['sensor']
     date_list = generate_weeks_list(date_start, info)
     timezone = get_sensor_timezone(info)
     # Time how long the downloading takes
