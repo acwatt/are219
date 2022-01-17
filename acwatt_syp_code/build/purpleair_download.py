@@ -44,7 +44,9 @@ def rest_csv_to_df(url, query):
     logger.info(f'Making the following request from {url}')
     logger.info(query)
     response = requests.get(url, params=query)
-    df = pd.read_csv(StringIO(str(response.content)))
+    data = response.json()
+    logger.info(f'Request {"successful" if response.status_code else "failed"}')
+    df = pd.DataFrame(data['data'], columns=data['fields'])
     return df
 
 
