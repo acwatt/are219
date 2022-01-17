@@ -17,13 +17,14 @@ from ..utils.config import PATHS
 plt.style.use('ggplot')
 
 
-def sensor_df_to_geo(df, area, by=None):
+def sensor_df_to_geo(df, area: str, by=None):
     """Return geopandas dataframes: one with sensor points, one with geographic area polygons.
 
     df = dataframe of sensor data, inlcuding columns = lat, lon
     area = string indicating area = ['world', 'us', 'california']
     by = None or 'county', if 'county', then dataframe and maps contain county borders.
     """
+    area = area.lower()
     if area == 'world':
         base_gdf = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
     elif area in ['us', 'california']:
