@@ -122,7 +122,45 @@ def dl_sensor_list_latlon_extent():
     response = requests.get(url, params=query)
 
 
-def generate_weeks_list(date_start: Union[str, None], sensor_info_dict: dict):
+def dl_sensor_list_all():
+    """Download add PurpleAir sensors' metadata."""
+    api_key = PA.read_key
+    url = "https://api.purpleair.com/v1/sensors"
+    fields = "sensor_index,date_created,latitude,longitude,altitude,position_rating," \
+             "private,location_type,confidence_auto,channel_state,channel_flags," \
+             "primary_id_a, primary_key_a, secondary_id_a, secondary_key_a, " \
+             "primary_id_b, primary_key_b, secondary_id_b, secondary_key_b," \
+             "pm2.5,pm2.5_a,pm2.5_b,pm2.5_24hour,pm2.5_1week," \
+             "humidity,temperature,pressure,voc,ozone1"
+    query = {'api_key': api_key, 'fields': fields.replace(" ", ""),
+             "location_type": "0", "max_age": "0"}
+    df = rest_csv_to_df(url, query)
+    return df
+
+
+def get_sensors_in_geography(extent='US'):
+    """Filter out sensors outside of extent (drop sensors outside US).
+
+    @param extent: str, geographical extent to filter to.
+        Allowed: 'world', 'us', 'california'
+    @return gdf: geodataframe with only sensors inside of extent
+    """
+    logger.info('Getting metadata for all Purple Air sensors')
+    df = dl_sensor_list_all()
+    df = df.rename(columns={'latitude': 'lat', 'longitude': 'lon'})
+    logger.info(f'Total number of sensors: {len(df)}')
+    logger.info(f'Filtering out unwanted sensors: '
+                f'inside, flagged, or downgraded sensors.')
+    df = filter_data(df)
+    logger.info(f'Number of sensors after type filtering: {len(df)}')
+    logger.info(f'Filtering out sensors outside of {extent.upper()}')
+    gdf, _ = sensor_df_to_geo(df, area=extent)
+    logger.info(f'Number of sensors after geographical filtering: {len(gdf)}')
+    return gdf
+
+
+def generate_weeks_list(sensor_info_dict: dict,
+                        date_start: Union[str, None] = None):
     """Return list of dates to iterate through for sensor downloading.
 
     Will return dates for the sunday in each week. If date_start = None, then
