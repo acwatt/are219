@@ -109,7 +109,7 @@ class AWSSettings:
 # FUNCTIONS --------------------------
 def start_log():
     logging.getLogger().addHandler(logging.StreamHandler())
-    logging.basicConfig(filename='main.log', level=logging.DEBUG)
+    logging.basicConfig(filename='main.log', level=logging.INFO)
 
 
 # MAIN -------------------------------

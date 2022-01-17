@@ -5,6 +5,8 @@
 # Built-in Imports
 import datetime as dt
 # from datetime import datetime, timedelta
+import logging
+
 from dateutil.relativedelta import relativedelta
 import json
 import pandas as pd
@@ -21,6 +23,9 @@ from timezonefinder import TimezoneFinder
 
 # Local imports
 from ..utils.config import PATHS, PA
+from ..analyze.maps import sensor_df_to_geo
+
+logger = logging.getLogger(__name__)
 
 # If retrieving data from multiple sensors at once, please send a single request
 # rather than individual requests in succession.
@@ -36,6 +41,8 @@ def parse_json(json_):
 
 def rest_csv_to_df(url, query):
     """Return REST query from API."""
+    logger.info(f'Making the following request from {url}')
+    logger.info(query)
     response = requests.get(url, params=query)
     df = pd.read_csv(StringIO(str(response.content)))
     return df
