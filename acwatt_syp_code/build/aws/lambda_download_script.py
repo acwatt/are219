@@ -118,6 +118,20 @@ def ip_test(id_, bucket):
     return upload_file(filepath, bucket)
 
 
+def generate_weeks_list(date_start: str):
+    """Return list of dates to iterate through for sensor downloading.
+
+    Will return dates for the sunday in each full week, starting from date_start.
+    @param date_start: str, start date in YYYY-MM-DD format
+    """
+    date_start = dt.datetime.strptime(date_start, '%Y-%m-%d')
+    date_list = pd.date_range(date_start, dt.datetime.today(), freq='w')
+    if len(date_list) == 1:
+        return date_list.append(pd.date_range(dt.datetime.today().date(), dt.datetime.today().date(), freq='d'))
+    else:
+        return date_list
+
+
 def lambda_ip_s3_writer(params, lambda_context):
     """
     Accepts an action and a number, performs the specified action on the number,
