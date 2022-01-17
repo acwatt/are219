@@ -79,3 +79,10 @@ for how to create a zip file in memory
   - detatches the iam_role policies
   - deletes the iam role
   - deletes the lambda function
+
+
+# Troubleshooting lambda functions:
+1. Getting "Access Denied" when the lambda function tries to save to S3. 
+  - manually deleting the S3 policy on the AWS console resolves the issue. 
+    Which probably indicates that the policy was not properly deleted or 
+    attached at the end of the previous run.

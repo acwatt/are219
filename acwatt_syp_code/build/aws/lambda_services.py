@@ -430,9 +430,7 @@ def save_pa_data_to_s3():
 
 """
 NOTES:
-- getting Access Denied from saving to S3. Something changed when I split lambda_series
-    into smaller functions. Why does demo-lambda-role-S3-ip-upload not get deleted?
-    --> manually deleting the S3 policy seemed to work
+
 
 - Update lambda_download_script to download-upload actual PA data for a sensor
 - Test full download on 5 sensors
