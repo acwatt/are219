@@ -109,7 +109,12 @@ def dl_sensor_list_latlon_extent():
     """Download sensor metadata for california"""
     api_key = PA.read_key
     url = "https://api.purpleair.com/v1/sensors"
-    fields = "sensor_index,date_created,latitude,longitude,altitude,position_rating,private,location_type,confidence_auto,channel_state,channel_flags,pm2.5,pm2.5_a,pm2.5_b,pm2.5_24hour,pm2.5_1week,humidity,temperature,pressure,voc,ozone1"
+    fields = "sensor_index,date_created,latitude,longitude,altitude,position_rating," \
+             "private,location_type,confidence_auto,channel_state,channel_flags," \
+             "primary_id_a, primary_key_a, secondary_id_a, secondary_key_a, " \
+             "primary_id_b, primary_key_b, secondary_id_b, secondary_key_b," \
+             "pm2.5,pm2.5_a,pm2.5_b,pm2.5_24hour,pm2.5_1week," \
+             "humidity,temperature,pressure,voc,ozone1"
     query = {'api_key': api_key, 'fields': fields.replace(" ", ""),
              "location_type": "0", "max_age": "0",
              "nwlng": "-124.96724575090495", "nwlat": "42.270281433624675",
