@@ -26,24 +26,12 @@ from ..utils.config import PATHS, PA
 # rather than individual requests in succession.
 
 
-"""
-PURPLE AIR PYTHON LIBRARY: https://github.com/ReagentX/purple_air_api
-Conditions of use:
- License and copyright notice
- State changes
- Disclose source
- Same license
-"""
-
-
-def df_sensors():
-    """Return list of sensors that have valid data."""
-    p = pan.SensorList()  # Initialized 22,877 sensors!22,836
-    # Other sensor filters include 'outside', 'all', 'useful', 'family', and 'no_child'
-    df = p.to_dataframe(sensor_filter='outside', channel='parent')
-    # TODO: Cache and check if this has already been downloaded in past 7 days
-    #       if not, redownload and update the cache
-    return df
+################################################################################
+# HELPER FUNCTIONS
+################################################################################
+def parse_json(json_):
+    dict_ = json.loads(json_)
+    return
 
 
 def rest_csv_to_df(url, query):
@@ -276,14 +264,6 @@ def dl_pm25(sensor_list):
         pass
 
 
-def dl_from_sensor(sensor_id, start_date=dt.datetime.now()):
-    df = (pan.Sensor(sensor_id)
-          .parent.get_historical(weeks_to_get=1,
-                                 thingspeak_field='secondary',
-                                 start_date=start_date))
-    return df
-
-
 def dl_in_geo_area(gdf, start_date=None, num_weeks=None):
     """Download data from sensors in gdf between start_date and end_date.
 
@@ -366,9 +346,7 @@ def update_loc_lookup(df, output=False):
         return loc_lookup
 
 
-def parse_json(json_):
-    dict_ = json.loads(json_)
-    return
+
 
 
 if __name__ == "__main__":
@@ -401,3 +379,34 @@ if __name__ == "__main__":
     print(df.head())
     print(df.tail())
     """
+
+
+################################################################################
+# PURPLE AIR NETWORK PACKAGE FUNCTIONS (no longer in use)
+################################################################################
+"""
+PURPLE AIR PYTHON LIBRARY: https://github.com/ReagentX/purple_air_api
+Conditions of use:
+ License and copyright notice
+ State changes
+ Disclose source
+ Same license
+"""
+
+
+def df_sensors():
+    """Return list of sensors that have valid data."""
+    p = pan.SensorList()  # Initialized 22,877 sensors!22,836
+    # Other sensor filters include 'outside', 'all', 'useful', 'family', and 'no_child'
+    df = p.to_dataframe(sensor_filter='outside', channel='parent')
+    # TODO: Cache and check if this has already been downloaded in past 7 days
+    #       if not, redownload and update the cache
+    return df
+
+
+def dl_from_sensor(sensor_id, start_date=dt.datetime.now()):
+    df = (pan.Sensor(sensor_id)
+          .parent.get_historical(weeks_to_get=1,
+                                 thingspeak_field='secondary',
+                                 start_date=start_date))
+    return df
