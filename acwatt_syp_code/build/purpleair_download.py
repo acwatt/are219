@@ -11,14 +11,11 @@ from dateutil.relativedelta import relativedelta
 import json
 import pandas as pd
 import requests
-from io import StringIO
 from typing import Optional, Union
 from pytz import timezone as tz
 
 # Third-party Imports
 from ratelimiter import RateLimiter
-import purpleair.network as pan
-from purpleair.network import SensorList, Sensor
 from timezonefinder import TimezoneFinder
 
 # Local imports
@@ -401,6 +398,8 @@ Conditions of use:
  Disclose source
  Same license
 """
+# import purpleair.network as pan
+# from purpleair.network import SensorList, Sensor
 
 
 def df_sensors():
