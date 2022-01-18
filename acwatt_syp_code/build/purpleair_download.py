@@ -69,8 +69,7 @@ def ts_requst(channel_id, start_date, api_key,
     """
     url = f"https://api.thingspeak.com/channels/{channel_id}/feeds.json"
     if end_date is None:
-        end_date = start_date + timedelta(days=7)
-        end_date = start_date + timedelta(minutes=4)
+        end_date = start_date + dt.timedelta(days=7)
     query = {'api_key': api_key,
              'start': start_date.strftime("%Y-%m-%d%%20%H:%M:%S"),
              'end': end_date.strftime("%Y-%m-%d%%20%H:%M:%S")}
