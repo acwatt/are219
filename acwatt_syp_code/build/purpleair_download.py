@@ -4,14 +4,14 @@
 
 # Built-in Imports
 import datetime as dt
-# from datetime import datetime, timedelta
+import os
 import logging
 
 import json
 import pandas as pd
 import requests
 from typing import Optional, Union
-from pytz import timezone as tz
+from pathlib import Path
 
 # Third-party Imports
 from ratelimiter import RateLimiter
@@ -22,6 +22,7 @@ from ..utils.config import PATHS, PA
 from ..analyze.maps import sensor_df_to_geo
 
 logger = logging.getLogger(__name__)
+
 
 # If retrieving data from multiple sensors at once, please send a single request
 # rather than individual requests in succession.
@@ -46,6 +47,53 @@ def rest_csv_to_df(url, query):
     return df
 
 
+def generate_weeks_list(sensor_info_dict: dict,
+                        date_start: Union[str, None] = None):
+    """Return list of dates to iterate through for sensor downloading.
+
+    Will return dates for the sunday in each week. If date_start = None, then
+    will return dates from the beginning of the sensor data until today.
+    """
+    if date_start is None:
+        date_start = dt.datetime.utcfromtimestamp(sensor_info_dict['date_created'])
+    else:
+        date_start = dt.datetime.strptime(date_start, '%Y-%m-%d')
+    date_start = date_start.date()
+    date_list = pd.date_range(date_start, dt.datetime.today(), freq='w')
+    if len(date_list) == 1:  #
+        return date_list.append(pd.date_range(dt.datetime.today().date(), dt.datetime.today().date(), freq='d'))
+    else:
+        return date_list
+
+
+def get_sensor_timezone(info):
+    """Return timezone of sensor located at lat,lon decimal coordinates."""
+    lat, lon = info['latitude'], info['longitude']
+    obj = TimezoneFinder()
+    timezone = obj.timezone_at(lng=lon, lat=lat)
+    return timezone
+
+
+# def filter_data(df):
+#     df = (df.query('location_type == "outside"')
+#           .query('downgraded == False')
+#           .query('flagged == False')
+#           )
+#     return df
+
+
+def filter_data(gdf):
+    gdf = (gdf
+           .query('channel_state == 3')
+           .query('channel_flags == 0')
+           .query('confidence_auto > 75')
+           .query('position_rating > 1'))
+    return gdf
+
+
+################################################################################
+# PURPLE AIR FUNCTIONS
+################################################################################
 def pa_request_single_sensor(sensor_id):
     api_key = PA.read_key
     url = f'https://api.purpleair.com/v1/sensors/{sensor_id}'
@@ -55,52 +103,6 @@ def pa_request_single_sensor(sensor_id):
     query = {'api_key': api_key, 'fields': fields.replace(' ', '')}
     response = requests.get(url, params=query)
     return response.json()
-
-
-@RateLimiter(max_calls=1, period=1)
-def ts_requst(channel_id, start_date, api_key,
-              end_date=None, average=None, timezone=None):
-    """Return dataframe of REST json data response for thingsspeak request.
-
-    channel_id = id of the device to get data from
-    start_date = datetime date
-    api_key = api key for the specific device with id channel_id
-    end_date = datetime date or None
-    """
-    url = f"https://api.thingspeak.com/channels/{channel_id}/feeds.json"
-    if end_date is None:
-        end_date = start_date + dt.timedelta(days=7)
-    query = {'api_key': api_key,
-             'start': start_date.strftime("%Y-%m-%d%%20%H:%M:%S"),
-             'end': end_date.strftime("%Y-%m-%d%%20%H:%M:%S")}
-    if average is not None:
-        query['average'] = average
-    if timezone is not None:
-        query['timezone'] = timezone
-    query_str = "&".join("%s=%s" % (k, v) for k, v in query.items())
-    response = requests.get(url, params=query_str)
-    columns = {key: response.json()['channel'][key] for key in [f'field{k}' for k in range(1, 9)]}
-    df = (pd.DataFrame(response.json()['feeds'])
-          .rename(columns=columns))
-    return df
-
-
-def ts_example():
-    channel_id = 655100
-    api_key = '2E6LYRAOFLQWQMIH'
-    url = f"https://api.thingspeak.com/channels/{channel_id}/feeds.json"
-    start_date = dt.datetime.today() - dt.timedelta(weeks=10)
-    end_date = dt.datetime.today()
-    query = {'api_key': api_key,
-             'start': start_date.strftime("%Y-%m-%d%%20%H:%M:%S"),
-             'end': end_date.strftime("%Y-%m-%d%%20%H:%M:%S"),
-             'average': 10}
-    query_str = "&".join("%s=%s" % (k, v) for k, v in query.items())
-    response = requests.get(url, params=query_str)
-    columns = {key: response.json()['channel'][key] for key in [f'field{k}' for k in range(1, 9)]}
-    df = (pd.DataFrame(response.json()['feeds'])
-          .rename(columns=columns))
-    return df
 
 
 def dl_sensor_list_latlon_extent():
@@ -127,60 +129,159 @@ def dl_sensor_list_all():
     fields = "sensor_index,date_created,latitude,longitude,altitude,position_rating," \
              "private,location_type,confidence_auto,channel_state,channel_flags," \
              "primary_id_a, primary_key_a, secondary_id_a, secondary_key_a, " \
-             "primary_id_b, primary_key_b, secondary_id_b, secondary_key_b," \
-             "pm2.5,pm2.5_a,pm2.5_b,pm2.5_24hour,pm2.5_1week," \
-             "humidity,temperature,pressure,voc,ozone1"
+             "primary_id_b, primary_key_b, secondary_id_b, secondary_key_b"
     query = {'api_key': api_key, 'fields': fields.replace(" ", ""),
              "location_type": "0", "max_age": "0"}
     df = rest_csv_to_df(url, query)
+    # Convert unix date to datetime
+    # df = df.assign(date_start=dt.datetime.utcfromtimestamp(df['date_created']))
+    df['date_created'] = df.apply(lambda row: dt.datetime.utcfromtimestamp(row['date_created']), axis=1)
     return df
 
 
-def get_sensors_in_geography(extent='US'):
+def dl_sensor_list_in_geography(extent: str='US',
+                                save_dir: Path=Path('/tmp/purple_air_data')):
     """Filter out sensors outside of extent (drop sensors outside US).
 
     @param extent: str, geographical extent to filter to.
         Allowed: 'world', 'us', 'california'
+    @param save_dir: pathlib path of directory to save CSV to. Pass None
+        if no CSV should be saved.
     @return gdf: geodataframe with only sensors inside of extent
     """
     logger.info('Getting metadata for all Purple Air sensors')
     df = dl_sensor_list_all()
     df = df.rename(columns={'latitude': 'lat', 'longitude': 'lon'})
     logger.info(f'Total number of sensors: {len(df)}')
-    logger.info(f'Filtering out unwanted sensors: '
-                f'inside, flagged, or downgraded sensors.')
-    df = filter_data(df)
-    logger.info(f'Number of sensors after type filtering: {len(df)}')
+    print("# of world Purple Air sensors:", len(df))
     logger.info(f'Filtering out sensors outside of {extent.upper()}')
     gdf, _ = sensor_df_to_geo(df, area=extent)
     logger.info(f'Number of sensors after geographical filtering: {len(gdf)}')
+    if save_dir is not None:
+        gdf.to_csv(save_dir / f'sensor_lookup_{extent}.csv')
     return gdf
 
 
-def generate_weeks_list(sensor_info_dict: dict,
-                        date_start: Union[str, None] = None):
-    """Return list of dates to iterate through for sensor downloading.
+def make_data_dir():
+    dir_ = "/tmp/purple_air_data"
+    if not(os.path.isdir(dir_)):  # doesn't exist
+        os.mkdir(dir_)
+    return dir_
 
-    Will return dates for the sunday in each week. If date_start = None, then
-    will return dates from the beginning of the sensor data until today.
+
+################################################################################
+# THINGSPEAK FUNCTIONS
+################################################################################
+# @RateLimiter(max_calls=1, period=1)
+def ts_request(channel_id, start_date, api_key,
+               end_date=None, average=None, timezone=None):
+    """Return dataframe of REST json data response for thingsspeak request.
+
+    @param channel_id = id of the device to get data from
+    @param start_date = datetime date
+    @param api_key = api key for the specific device with id channel_id
+    @param end_date = datetime date or None
+    @param average: integer, number of minutes to average over. Valid values:
+        valid values: 10, 15, 20, 30, 60, 240, 720, 1440 (this is daily)
+    @param timezone: timezone object from tz, timezone of device to get+ the
+        correct time.
     """
-    if date_start is None:
-        date_start = dt.datetime.utcfromtimestamp(sensor_info_dict['date_created'])
-    else:
-        date_start = dt.datetime.strptime(date_start, '%Y-%m-%d')
-    date_list = pd.date_range(date_start, dt.datetime.today(), freq='w')
-    if len(date_list) == 1:  #
-        return date_list.append(pd.date_range(dt.datetime.today().date(), dt.datetime.today().date(), freq='d'))
-    else:
-        return date_list
+    url = f"https://api.thingspeak.com/channels/{channel_id}/feeds.json"
+    if end_date is None:
+        end_date = start_date + dt.timedelta(days=7)
+    query = {'api_key': api_key,
+             'start': start_date.strftime("%Y-%m-%d%%20%H:%M:%S"),
+             'end': end_date.strftime("%Y-%m-%d%%20%H:%M:%S")}
+    if average is not None:
+        query['average'] = average  # in minutes
+    if timezone is not None:
+        query['timezone'] = timezone
+    query_str = "&".join("%s=%s" % (k, v) for k, v in query.items())
+    response = requests.get(url, params=query_str)
+    columns = {key: response.json()['channel'][key] for key in [f'field{k}' for k in range(1, 9)]}
+    df = (pd.DataFrame(response.json()['feeds'])
+          .rename(columns=columns))
+    return df
 
 
-def get_sensor_timezone(info):
-    """Return timezone of sensor located at lat,lon decimal coordinates."""
-    lat, lon = info['latitude'], info['longitude']
-    obj = TimezoneFinder()
-    timezone = obj.timezone_at(lng=lon, lat=lat)
-    return timezone
+def ts_example():
+    sensor_info = pa_request_single_sensor(25999)['sensor']
+    date_list = generate_weeks_list(sensor_info)
+    for d in date_list: print(d)
+
+    channel_id = sensor_info['primary_id_a']
+    api_key = sensor_info['primary_key_a']
+    start_date = dt.datetime.today().date() - dt.timedelta(days=20)
+    end_date = start_date + dt.timedelta(days=7)
+    timezone = get_sensor_timezone(sensor_info)
+    df = ts_request(channel_id, start_date, api_key,
+                    end_date=end_date, average=60, timezone=timezone)
+    start_date = end_date
+    end_date = start_date + dt.timedelta(days=7)
+    timezone = get_sensor_timezone(sensor_info)
+    df2 = ts_request(channel_id, start_date, api_key,
+                     end_date=end_date, average=60, timezone=timezone)
+    print(df.head())
+    print(df.tail())
+    print(df2.head())
+    return df
+
+
+def dl_sensor_week(sensor_info: dict, date_start: dt.datetime,
+                   average: int = 60):
+    """Download a week's (hourly) averages of data for sensor from all 4 channels.
+
+    @param sensor_info: information about sensor
+
+    """
+    date_end = date_start + dt.timedelta(days=7)
+    timezone = get_sensor_timezone(sensor_info)
+
+    print(f"\n. . Downloading week {date_start.strftime('%Y-%m-%d')}")
+    print(f'. . Date Range: {date_start} - {date_end}')
+    print(f'. . . . ', end='')
+    df_list = []
+    # Iterate through the different channels of the device to get all the data
+    for channel in ['a', 'b']:
+        print(f'|| channel {channel}: ', end='')
+        for type_ in ['primary', 'secondary']:
+            print(f'type {type_} ', end='')
+            channel_id = sensor_info[f'{type_}_id_{channel}']
+            api_key = sensor_info[f'{type_}_key_{channel}']
+            # Error handling in the downloading process
+            errors = 0
+            while errors < 5:
+                try:  # get the data
+                    df = ts_request(channel_id, date_start, api_key,
+                                    end_date=date_end, average=average, timezone=timezone)
+                    break
+                except:
+                    print(f'ts_request failed. Trying again. Previous errors = {errors}')
+                    errors += 1
+                    raise
+            if errors == 5:
+                print(f'Reached maximum tries for channel {channel}, type {type_}, date {start} - {end}.')
+                print('Skipping')
+            if len(df) > 0:
+                df.insert(loc=1, column='sensor_id', value=sensor_info['sensor_index'])
+                # df['sensor_id'] = sensor_info['sensor_index']
+                df.insert(loc=2, column='channel', value=channel)
+                # df['channel'] = channel
+                df.insert(loc=3, column='subchannel_type', value=type_)
+                # df['subchannel_type'] = type_
+                df_list.append(df)
+                print(f'({len(df)}) ', end='')
+            elif len(df) == 0:
+                # if any of the channels are empty, the data isn't useful
+                print('NO DATA -- skipping')
+                return None
+
+    if len(df_list) > 0:
+        df2 = pd.concat(df_list)
+        print('\n. . total rows:', len(df2))
+        return df2
+    else:
+        return None
 
 
 def dl_sensor_weeks(sensor_id: Union[str, int, float] = None,
@@ -228,149 +329,47 @@ def dl_sensor_weeks(sensor_id: Union[str, int, float] = None,
                     valid values: 10, 15, 20, 30, 60, 240, 720, 1440 (this is daily)
     :return: pandas.DataFrame: concatenated data from sensors
     """
-    sensor_id = int(sensor_id)
     # todo: use info['latitude'], lon, to update dataframe of sensor
     #       see load_current_sensor_data() and update_loc_lookup()
-    info = pa_request_single_sensor(sensor_id)['sensor']
-    date_list = generate_weeks_list(date_start, info)
-    timezone = get_sensor_timezone(info)
+    sensor_info = pa_request_single_sensor(sensor_id)['sensor']
+    week_starts = generate_weeks_list(sensor_info, date_start=date_start)
     # Time how long the downloading takes
     time1 = dt.datetime.now()
-    # iterate through all different channels of data for sensor
     df_list = []
-    print(f'\nDownloading for sensor {sensor_id}')
-    for i in reversed(range(len(date_list) - 1)):
-        start, end = date_list[i: i + 2].date
-        # offset = daylight_savings_offset(start, timezone)
-        print(f'. . Date Range: {start} - {end}')
-        for channel in ['a', 'b']:
-            for type_ in ['primary', 'secondary']:
-                print(f'. . . . channel {channel}, type {type_}', end='   ')
-                channel_id = info[f'{type_}_id_{channel}']
-                api_key = info[f'{type_}_key_{channel}']
-                # Error handling in the downloading process
-                errors = 0
-                while errors < 5:
-                    try:  # get the data
-                        df = ts_requst(channel_id, start, api_key,
-                                       end_date=end, average=average, timezone=timezone)
-                        break
-                    except:
-                        print(f'ts_requst failed. Trying again. Previous errors = {errors}')
-                        errors += 1
-                if errors == 5:
-                    print(f'Reached maximum trys for channel {channel}, type {type_}, date {start} - {end}.')
-                    print('Skipping')
-                if len(df) > 0:
-                    df['channel'] = channel
-                    df['subchannel_type'] = type_
-                    df['sensor_id'] = sensor_id
-                    df_list.append(df)
-                    print('Rows:', len(df))
-        print('total rows:', len(pd.concat(df_list)))
+    print(f'\nDownloading all weeks for sensor {sensor_id} ===================')
+    for start_date in week_starts:
+        df_week = dl_sensor_week(sensor_info, start_date)
+        if df_week is None:
+            continue
+        else:
+            df_list.append(df_week)
 
-    df2 = pd.concat(df_list)
-    time2 = dt.datetime.now()
-    print(f'total time: {time2 - time1}')
-    return df2
-
-
-def add_field_columns(df, channel, type_):
-    # column names dictionary
-    colnames_dict = {
-        'primary_fields_a': ["created_at", "entry_id", "pm1_0_atm", "pm2_5_atm",
-                             "pm10_0_atm", "uptime_min", "rssi_wifi_strength",
-                             "temp_f", "humidity", "pm2_5_cf_1"],
-        'secondary_fields_a': ["created_at", "entry_id", "p_0_3_um", "p_0_5_um",
-                               "p_1_0_um", "p_2_5_um", "p_5_0_um", "p_10_0_um",
-                               "pm1_0_cf_1", "pm10_0_cf_1"],
-        'primary_fields_b': ["created_at", "entry_id", "pm1_0_atm", "pm2_5_atm",
-                             "pm10_0_atm", "free_heap_memory", "analog_input",
-                             "sensor_firmware_pressure", "not_used", "pm2_5_cf_1"],
-        'secondary_fields_b': ["created_at", "entry_id", "p_0_3_um", "p_0_5_um",
-                               "p_1_0_um", "p_2_5_um", "p_5_0_um", "p_10_0_um",
-                               "pm1_0_cf_1", "pm10_0_cf_1"]
-    }
-
-    # Rename the columns
-    df.columns = colnames_dict[f'{type_}_fields_{channel}']
+    if len(df_list) > 0:
+        df = pd.concat(df_list)
+    else:
+        df = None
+    print(f'total time: {dt.datetime.now() - time1}')
     return df
 
 
-def filter_data(df):
-    df = (df.query('location_type == "outside"')
-          .query('downgraded == False')
-          .query('flagged == False')
-          )
-    return df
+def dl_sensors(sensor_list):
+    """Save data for each sensor to local CSV"""
+    save_dir = make_data_dir()
+
+    for sensor_id in sensor_list:
+        df = dl_sensor_weeks(sensor_id)
+        df = df.sort_values(by=['created_at', 'sensor_id', 'channel', 'subchannel_type'])
+        filepath = f'{save_dir}/{sensor_id:06d}.csv'
+        df.to_csv(filepath)
 
 
-def dl_pm25(sensor_list):
-    """Save dataframe of PM 2.5 data from all valid sensors."""
-    for s in sensor_list:
-        pass
-
-
-def dl_in_geo_area(gdf, start_date=None, num_weeks=None):
-    """Download data from sensors in gdf between start_date and end_date.
-
-    gdf = geopandas dataframe that has already been filtered for sensors within
-        a geographic area using analyze.maps.sensor_df_to_geo()
-    start_date, end_date = datetime.datetime date
-    """
-    # Request data from each sensor in num_week chunks
-    beginning = datetime.today().date() - timedelta(weeks=num_weeks)
-    # while beginning > start_date:
-    #     for
-    #
-    #     beginning = beginning - timedelta(weeks=num_weeks)
-    #     if beginning < start_date:
-    #         beginning = start_date
-
-
-def dl_id_by_date(id, end_date, num_weeks=10):
-    """Return dataframe of historical sensor data for id between dates."""
-    dfs = [(se
-            .parent
-            .get_historical(weeks_to_get=1, thingspeak_field='primary')
-            .assign(sensor_id=se.identifier, channel='parent')
-            .filter(cols_to_keep, axis=1)) for se in se2]
-
-
-def dl_geo_by_date(gdf, start_date, end_date):
-    """Download data from sensors in gdf between start_date and end_date.
-
-    gdf = geopandas dataframe that has already been filtered for sensors within
-        a geographic area using analyze.maps.sensor_df_to_geo()
-    start_date, end_date = datetime.datetime date
-    """
-    pass
-
-
-def sensorid_to_df(sensor_id):
-    """Return dataframe of current sensor data from sensor with id = sensor_id"""
-    print(sensor_id)
-    dict_ = Sensor(int(sensor_id)).as_dict()
-    row_dict = {}
-    for channel in dict_:
-        suffix = {'parent': '_1', 'child': '_2'}[channel]
-        for k1 in dict_[channel]:
-            for k2 in dict_[channel][k1]:
-                row_dict[k2 + suffix] = [dict_[channel][k1][k2]]
-    # Add created datetime column
-    created_unix = dict_['parent']['diagnostic']['created']
-    return (pd.DataFrame.from_dict(row_dict)
-            .assign(created_date=dt.utcfromtimestamp(created_unix)))
-
-
-def load_current_sensor_data(update_lookup=True):
-    """Return dataframe of current sensor data."""
-    df = df_sensors()
-    df = filter_data(df)
-    # Update sensor location lookup table
-    if update_lookup:
-        update_loc_lookup(df)
-    return df
+def dl_us_sensors():
+    gdf = dl_sensor_list_in_geography('US')
+    print("# of US Purple Air sensors:", len(gdf))
+    gdf = filter_data(gdf)
+    print("# of US Purple Air sensors after filtering:", len(gdf))
+    sensor_list = gdf.sensor_index
+    dl_sensors(sensor_list)
 
 
 def update_loc_lookup(df, output=False):
@@ -391,9 +390,6 @@ def update_loc_lookup(df, output=False):
     loc_lookup.to_csv(PATHS.data.lookup_location, index=False)
     if output:
         return loc_lookup
-
-
-
 
 
 if __name__ == "__main__":
@@ -427,7 +423,6 @@ if __name__ == "__main__":
     print(df.tail())
     """
 
-
 ################################################################################
 # PURPLE AIR NETWORK PACKAGE FUNCTIONS (no longer in use)
 ################################################################################
@@ -439,6 +434,8 @@ Conditions of use:
  Disclose source
  Same license
 """
+
+
 # import purpleair.network as pan
 # from purpleair.network import SensorList, Sensor
 
@@ -453,9 +450,69 @@ def df_sensors():
     return df
 
 
+def load_current_sensor_data(update_lookup=True):
+    """Return dataframe of current sensor data."""
+    df = df_sensors()
+    df = filter_data(df)
+    # Update sensor location lookup table
+    if update_lookup:
+        update_loc_lookup(df)
+    return df
+
+
 def dl_from_sensor(sensor_id, start_date=dt.datetime.now()):
     df = (pan.Sensor(sensor_id)
           .parent.get_historical(weeks_to_get=1,
                                  thingspeak_field='secondary',
                                  start_date=start_date))
+    return df
+
+
+def sensorid_to_df(sensor_id):
+    """Return dataframe of current sensor data from sensor with id = sensor_id"""
+    print(sensor_id)
+    dict_ = Sensor(int(sensor_id)).as_dict()
+    row_dict = {}
+    for channel in dict_:
+        suffix = {'parent': '_1', 'child': '_2'}[channel]
+        for k1 in dict_[channel]:
+            for k2 in dict_[channel][k1]:
+                row_dict[k2 + suffix] = [dict_[channel][k1][k2]]
+    # Add created datetime column
+    created_unix = dict_['parent']['diagnostic']['created']
+    return (pd.DataFrame.from_dict(row_dict)
+            .assign(created_date=dt.utcfromtimestamp(created_unix)))
+
+
+def dl_id_by_date(id, end_date, num_weeks=10):
+    """Return dataframe of historical sensor data for id between dates."""
+    dfs = [(se
+            .parent
+            .get_historical(weeks_to_get=1, thingspeak_field='primary')
+            .assign(sensor_id=se.identifier, channel='parent')
+            .filter(cols_to_keep, axis=1)) for se in se2]
+
+
+################################################################################
+# GENERAL ARCHIVE
+################################################################################
+def add_field_columns(df, channel, type_):
+    # column names dictionary
+    colnames_dict = {
+        'primary_fields_a': ["created_at", "entry_id", "pm1_0_atm", "pm2_5_atm",
+                             "pm10_0_atm", "uptime_min", "rssi_wifi_strength",
+                             "temp_f", "humidity", "pm2_5_cf_1"],
+        'secondary_fields_a': ["created_at", "entry_id", "p_0_3_um", "p_0_5_um",
+                               "p_1_0_um", "p_2_5_um", "p_5_0_um", "p_10_0_um",
+                               "pm1_0_cf_1", "pm10_0_cf_1"],
+        'primary_fields_b': ["created_at", "entry_id", "pm1_0_atm", "pm2_5_atm",
+                             "pm10_0_atm", "free_heap_memory", "analog_input",
+                             "sensor_firmware_pressure", "not_used", "pm2_5_cf_1"],
+        'secondary_fields_b': ["created_at", "entry_id", "p_0_3_um", "p_0_5_um",
+                               "p_1_0_um", "p_2_5_um", "p_5_0_um", "p_10_0_um",
+                               "pm1_0_cf_1", "pm10_0_cf_1"]
+    }
+
+    # Rename the columns
+    df.columns = colnames_dict[f'{type_}_fields_{channel}']
     return df
