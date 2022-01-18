@@ -62,8 +62,6 @@ class Data:
                 path.mkdir(parents=True, exist_ok=True)
 
 
-
-
 class GISSettings:
     """Class to hold settings for gis portion of project.
 
@@ -117,8 +115,14 @@ class AWSSettings:
 
 # FUNCTIONS --------------------------
 def start_log():
-    logging.getLogger().addHandler(logging.StreamHandler())
-    logging.basicConfig(filename='main.log', level=logging.INFO)
+    format_ = '%(asctime)s (%(levelname)s) %(name)s: %(message)s'
+    datetime_ = '%Y-%m-%d %H:%M:%S'
+    logging.basicConfig(filename='main.log', filemode='w', level=logging.DEBUG, format=format_, datefmt=datetime_)
+    formatter = logging.Formatter(format_, datefmt=datetime_)
+    streamer = logging.StreamHandler()
+    streamer.setFormatter(formatter)
+    streamer.setLevel(logging.INFO)
+    logging.getLogger().addHandler(streamer)
 
 
 # MAIN -------------------------------
