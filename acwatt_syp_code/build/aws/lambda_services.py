@@ -420,12 +420,10 @@ def save_pa_data_to_s3():
     last_modified_list = [1635632829, 1634149424, 1634410114, 1633665195, 1635632829]
     sensor_tuples = [t for t in zip(sensors, date_created_list, last_modified_list)]
 
+    sensor_tuples = [()]
+
     lambda_series(sensor_tuples)
     print('DONE WITH SAVING PURPLE AIR DATA')
-
-
-
-
 
 
 """
@@ -440,6 +438,8 @@ NOTES:
 
 
 """
+
+
 ################################################################################
 # ARCHIVE
 ################################################################################
