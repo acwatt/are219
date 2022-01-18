@@ -257,12 +257,11 @@ def dl_sensor_week(sensor_info: dict, date_start: dt.datetime,
                     df = ts_request(channel_id, date_start, api_key,
                                     end_date=date_end, average=average, timezone=timezone)
                     break
-                except:
+                except ConnectionError:
                     print(f'ts_request failed. Trying again. Previous errors = {errors}')
                     errors += 1
-                    raise
             if errors == 5:
-                print(f'Reached maximum tries for channel {channel}, type {type_}, date {start} - {end}.')
+                print(f'Reached maximum tries for channel {channel}, type {type_}, date {date_start} - {date_end}.')
                 print('Skipping')
             if len(df) > 0:
                 df.insert(loc=1, column='sensor_id', value=sensor_info['sensor_index'])
