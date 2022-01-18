@@ -54,6 +54,15 @@ class Data:
         self.lookup_location = self.tables / 'tbl_location_lookup.csv'
         self.lookup_fips = self.tables / 'tbl_fips_lookup.csv'
 
+        self.make_directories()
+
+    def make_directories(self):
+        for _, path in self.__dict__.items():
+            if path.suffix == '':
+                path.mkdir(parents=True, exist_ok=True)
+
+
+
 
 class GISSettings:
     """Class to hold settings for gis portion of project.
