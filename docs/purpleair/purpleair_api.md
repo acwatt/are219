@@ -1,3 +1,37 @@
+# Sensor-specific fields
+
+The following fields can be used to determine the accuracy of location and 
+readings coming from a sensor. Unfortunately, they are only at the sensor 
+level (not the sensor-reading or sensor-year level) so they can only be used 
+to disqualify an entire sensor history, not individual sensor readings.
+
+## location_types
+String[] 	
+
+When the data includes a location_type, this field is included with the following values: ["outside", "inside"] An array representing the values for the location_type column
+Possible values are: 0 = Outside or 1 = Inside.
+
+## channel_states
+String[] 	
+
+["No PM", "PM-A", "PM-B", "PM-A+PM-B"] 
+
+Possible values are:
+- No PM = No PM sensors were detected.
+- PM-A = PM sensor on channel A only.
+- PM-B = PM sensor on channel B only.
+- PM-A+PM-B = PM sensor on both channel A and B.
+
+# channel_flags
+String[] 	
+
+["Normal", "A-Downgraded", "B-Downgraded", "A+B-Downgraded"] 
+Possible values are:
+- Normal = No PM sensors are marked as downgraded.
+- A-Downgraded = PM sensor on channel A is marked as downgraded.
+- B-Downgraded = PM sensor on channel B is marked as downgraded.
+- A+B-Downgraded = PM sensors on both channels A and B are marked as downgraded.
+
 
 
 one of our main goals here at PurpleAir, to make high-quality data accessible to everyone. From elementary school students, to data scientists, people use our API to learn more about coding, API’s, geography, and especially air quality.
