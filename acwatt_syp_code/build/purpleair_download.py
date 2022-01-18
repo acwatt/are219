@@ -6,12 +6,15 @@
 import datetime as dt
 import os
 import logging
+import time
+import numpy as np
 
 import json
 import pandas as pd
 import requests
 from typing import Optional, Union
 from pathlib import Path
+import threading
 
 # Third-party Imports
 from ratelimiter import RateLimiter
@@ -351,8 +354,18 @@ def dl_sensor_weeks(sensor_id: Union[str, int, float] = None,
     print(f'total time: {dt.datetime.now() - time1}')
     return df
 
+def save_success(sensor_id, time_taken, write_lock):
+    filepath = PATHS.data.purpleair / 'sensors_downloaded.csv'
+    try:
+        df = pd.read_csv(filepath)
+    except FileNotFoundError:
+        df = pd.DataFrame({'sensor_id': sensor_id, 'time_taken': time_taken},
+                          index=[sensor_id])
+    with write_lock:
+        df.to_csv(filepath, index=False)
 
-def dl_sensors(sensor_list):
+
+def dl_sensors(sensor_list, write_lock):
     """Save data for each sensor to local CSV"""
     save_dir = make_data_dir()
 
@@ -368,8 +381,33 @@ def dl_us_sensors():
     print("# of US Purple Air sensors:", len(gdf))
     gdf = filter_data(gdf)
     print("# of US Purple Air sensors after filtering:", len(gdf))
-    sensor_list = gdf.sensor_index
-    dl_sensors(sensor_list)
+    # randomize the sensors and pick num_sensors to time
+    np.random.seed(13)
+    sensor_list = np.random.permutation(gdf.sensor_index)
+    num_sensors = 5
+    sensor_list = sensor_list[:num_sensors]
+    write_lock = threading.Lock()
+    times = []
+    for num_threads in range(1, 6):
+        start = time.perf_counter()
+        sensor_lists = np.array_split(sensor_list, num_threads)
+        threads = []
+        for i in range(num_threads):
+            s_list = sensor_lists[i]
+            args = (s_list, write_lock)
+            thread = threading.Thread(target=dl_sensors, args=args)
+            thread.start()
+            threads.append(thread)
+
+        # Wait for all threads to finish
+        for thread in threads:
+            thread.join()
+        t = round((time.perf_counter() - start)/60, 2)
+        print(f'TIME: {t} minutes')
+        times.append([num_threads, t/num_sensors])
+
+    print('Average times:')
+    print(times)
 
 
 def update_loc_lookup(df, output=False):
