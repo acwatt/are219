@@ -266,11 +266,8 @@ def dl_sensor_week(sensor_info: dict, date_start: dt.datetime,
                 print('Skipping')
             if len(df) > 0:
                 df.insert(loc=1, column='sensor_id', value=sensor_info['sensor_index'])
-                # df['sensor_id'] = sensor_info['sensor_index']
                 df.insert(loc=2, column='channel', value=channel)
-                # df['channel'] = channel
                 df.insert(loc=3, column='subchannel_type', value=type_)
-                # df['subchannel_type'] = type_
                 df_list.append(df)
                 logging.info(f'. . . . . . type {type_} ({len(df)})')
             elif len(df) == 0:
