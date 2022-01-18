@@ -142,6 +142,7 @@ def lambda_ip_s3_writer(params, lambda_context):
     :return: The result of the specified action.
     """
     id_ = params['sensor_id']
+    id_list = params['sensor_id_list']
     bucket = params['bucket_name']
     created_date = params['date_created']
     last_modified = params['last_modified']
