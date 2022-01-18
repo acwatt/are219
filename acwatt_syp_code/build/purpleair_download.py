@@ -240,15 +240,14 @@ def dl_sensor_week(sensor_info: dict, date_start: dt.datetime,
     date_end = date_start + dt.timedelta(days=7)
     timezone = get_sensor_timezone(sensor_info)
 
-    print(f"\n. . Downloading week {date_start.strftime('%Y-%m-%d')}")
-    print(f'. . Date Range: {date_start} - {date_end}')
-    print(f'. . . . ', end='')
+    print(sensor_info['sensor_index'], date_start.strftime('%Y-%m-%d'))
+    logging.info(f"\n. . Downloading week {date_start.strftime('%Y-%m-%d')}")
+    logging.info(f'. . Date Range: {date_start} - {date_end}')
     df_list = []
     # Iterate through the different channels of the device to get all the data
     for channel in ['a', 'b']:
-        print(f'|| channel {channel}: ', end='')
+        logging.info(f'. . . . channel {channel}: ')
         for type_ in ['primary', 'secondary']:
-            print(f'type {type_} ', end='')
             channel_id = sensor_info[f'{type_}_id_{channel}']
             api_key = sensor_info[f'{type_}_key_{channel}']
             # Error handling in the downloading process
@@ -273,15 +272,15 @@ def dl_sensor_week(sensor_info: dict, date_start: dt.datetime,
                 df.insert(loc=3, column='subchannel_type', value=type_)
                 # df['subchannel_type'] = type_
                 df_list.append(df)
-                print(f'({len(df)}) ', end='')
+                logging.info(f'. . . . . . type {type_} ({len(df)})')
             elif len(df) == 0:
                 # if any of the channels are empty, the data isn't useful
-                print('NO DATA -- skipping')
+                logging.info('NO DATA -- skipping')
                 return None
 
     if len(df_list) > 0:
         df2 = pd.concat(df_list)
-        print('\n. . total rows:', len(df2))
+        logging.info(f'\n. . total rows:{len(df2)}')
         return df2
     else:
         return None
@@ -339,7 +338,7 @@ def dl_sensor_weeks(sensor_id: Union[str, int, float] = None,
     # Time how long the downloading takes
     time1 = dt.datetime.now()
     df_list = []
-    print(f'\nDownloading all weeks for sensor {sensor_id} ===================')
+    logging.info(f'\nDownloading all weeks for sensor {sensor_id} ===================')
     for start_date in week_starts:
         df_week = dl_sensor_week(sensor_info, start_date)
         if df_week is None:
@@ -351,8 +350,10 @@ def dl_sensor_weeks(sensor_id: Union[str, int, float] = None,
         df = pd.concat(df_list)
     else:
         df = None
-    print(f'total time: {dt.datetime.now() - time1}')
-    return df
+    time_taken = dt.datetime.now() - time1
+    print(f'total time: {time_taken}')
+    return df, time_taken
+
 
 def save_success(sensor_id, time_taken, write_lock):
     filepath = PATHS.data.purpleair / 'sensors_downloaded.csv'
@@ -370,10 +371,12 @@ def dl_sensors(sensor_list, write_lock):
     save_dir = make_data_dir()
 
     for sensor_id in sensor_list:
-        df = dl_sensor_weeks(sensor_id)
+        df, time_taken = dl_sensor_weeks(sensor_id)
         df = df.sort_values(by=['created_at', 'sensor_id', 'channel', 'subchannel_type'])
         filepath = f'{save_dir}/{sensor_id:06d}.csv'
         df.to_csv(filepath)
+        # Sensor done, write success to file
+        save_success(sensor_id, time_taken, write_lock)
 
 
 def dl_us_sensors():
