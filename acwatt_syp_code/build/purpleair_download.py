@@ -354,11 +354,13 @@ def dl_sensor_weeks(sensor_id: Union[str, int, float] = None,
 
 def save_success(sensor_id, time_taken, write_lock):
     filepath = PATHS.data.purpleair / 'sensors_downloaded.csv'
+    df = pd.DataFrame({'sensor_id': sensor_id, 'time_taken': time_taken},
+                      index=[sensor_id])
     try:
-        df = pd.read_csv(filepath)
+        df_old = pd.read_csv(filepath)
+        df = pd.concat([df_old, df])
     except FileNotFoundError:
-        df = pd.DataFrame({'sensor_id': sensor_id, 'time_taken': time_taken},
-                          index=[sensor_id])
+        pass
     with write_lock:
         df.to_csv(filepath, index=False)
 
