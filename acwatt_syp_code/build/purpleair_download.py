@@ -235,7 +235,8 @@ def dl_sensor_week(sensor_info: dict, date_start: dt.datetime,
     """Download a week's (hourly) averages of data for sensor from all 4 channels.
 
     @param sensor_info: information about sensor
-
+    @param date_start: date to start downloading from, with the 6 days following
+    @param average: number of minutes to average over
     """
     date_end = date_start + dt.timedelta(days=7)
     timezone = get_sensor_timezone(sensor_info)
