@@ -6,12 +6,10 @@
 PURPOSE:
 Writes IP address used during lambda function execution to S3 bucket CSV.
 """
-import io
 import logging
 import pandas as pd
 import datetime as dt
 import requests
-import json
 import os
 
 import boto3
