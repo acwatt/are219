@@ -7,7 +7,6 @@ import datetime as dt
 # from datetime import datetime, timedelta
 import logging
 
-from dateutil.relativedelta import relativedelta
 import json
 import pandas as pd
 import requests
