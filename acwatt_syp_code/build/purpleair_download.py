@@ -41,8 +41,7 @@ def parse_json(json_):
 
 def rest_csv_to_df(url, query):
     """Return REST query from API."""
-    logger.info(f'Making the following request from {url}')
-    logger.info(query)
+    logger.info(f'Making request from {url}')
     response = requests.get(url, params=query)
     data = response.json()
     logger.info(f'Request {"successful" if response.status_code else "failed"}')
@@ -242,12 +241,12 @@ def dl_sensor_week(sensor_info: dict, date_start: dt.datetime,
     timezone = get_sensor_timezone(sensor_info)
 
     print(sensor_info['sensor_index'], date_start.strftime('%Y-%m-%d'))
-    logging.info(f"\n. . Downloading week {date_start.strftime('%Y-%m-%d')}")
-    logging.info(f'. . Date Range: {date_start} - {date_end}')
+    logging.debug(f"\n. . Downloading week {date_start.strftime('%Y-%m-%d')}")
+    logging.debug(f'. . Date Range: {date_start} - {date_end}')
     df_list = []
     # Iterate through the different channels of the device to get all the data
     for channel in ['a', 'b']:
-        logging.info(f'. . . . channel {channel}: ')
+        logging.debug(f'. . . . channel {channel}: ')
         for type_ in ['primary', 'secondary']:
             channel_id = sensor_info[f'{type_}_id_{channel}']
             api_key = sensor_info[f'{type_}_key_{channel}']
@@ -269,15 +268,15 @@ def dl_sensor_week(sensor_info: dict, date_start: dt.datetime,
                 df.insert(loc=2, column='channel', value=channel)
                 df.insert(loc=3, column='subchannel_type', value=type_)
                 df_list.append(df)
-                logging.info(f'. . . . . . type {type_} ({len(df)})')
+                logging.debug(f'. . . . . . type {type_} ({len(df)})')
             elif len(df) == 0:
                 # if any of the channels are empty, the data isn't useful
-                logging.info('NO DATA -- skipping')
+                logging.debug('NO DATA -- skipping')
                 return None
 
     if len(df_list) > 0:
         df2 = pd.concat(df_list)
-        logging.info(f'\n. . total rows:{len(df2)}')
+        logging.debug(f'\n. . total rows:{len(df2)}')
         return df2
     else:
         return None
@@ -335,7 +334,7 @@ def dl_sensor_weeks(sensor_id: Union[str, int, float] = None,
     # Time how long the downloading takes
     time1 = dt.datetime.now()
     df_list = []
-    logging.info(f'\nDownloading all weeks for sensor {sensor_id} ===================')
+    logging.debug(f'\nDownloading all weeks for sensor {sensor_id} ===================')
     for start_date in week_starts:
         df_week = dl_sensor_week(sensor_info, start_date)
         if df_week is None:
@@ -386,11 +385,12 @@ def dl_us_sensors():
     # randomize the sensors and pick num_sensors to time
     np.random.seed(13)
     sensor_list = np.random.permutation(gdf.sensor_index)
-    num_sensors = 5
+    num_sensors = 20
     sensor_list = sensor_list[:num_sensors]
     write_lock = threading.Lock()
     times = []
-    for num_threads in range(1, 6):
+    for num_threads in [10, 20]:
+        logger.info(f'Downloading sensors with {num_threads} threads')
         start = time.perf_counter()
         sensor_lists = np.array_split(sensor_list, num_threads)
         threads = []

@@ -117,7 +117,7 @@ class AWSSettings:
 def start_log():
     format_ = '%(asctime)s (%(levelname)s) %(name)s: %(message)s'
     datetime_ = '%Y-%m-%d %H:%M:%S'
-    logging.basicConfig(filename='main.log', filemode='w', level=logging.DEBUG, format=format_, datefmt=datetime_)
+    logging.basicConfig(filename='main.log', filemode='w', level=logging.INFO, format=format_, datefmt=datetime_)
     formatter = logging.Formatter(format_, datefmt=datetime_)
     streamer = logging.StreamHandler()
     streamer.setFormatter(formatter)
