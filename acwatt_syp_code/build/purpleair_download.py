@@ -11,6 +11,7 @@ import numpy as np
 
 import json
 import pandas as pd
+from pandas.errors import InvalidIndexError
 import requests
 from typing import Optional, Union
 from pathlib import Path
@@ -203,6 +204,7 @@ def ts_request(channel_id, start_date, api_key,
     columns = {key: response.json()['channel'][key] for key in [f'field{k}' for k in range(1, 9)]}
     df = (pd.DataFrame(response.json()['feeds'])
           .rename(columns=columns))
+    print(columns)
     return df
 
 
@@ -240,18 +242,14 @@ def dl_sensor_week(sensor_info: dict, date_start: dt.datetime,
     date_end = date_start + dt.timedelta(days=7)
     timezone = get_sensor_timezone(sensor_info)
 
-    print(sensor_info['sensor_index'], date_start.strftime('%Y-%m-%d'))
-    logging.debug(f"\n. . Downloading week {date_start.strftime('%Y-%m-%d')}")
-    logging.debug(f'. . Date Range: {date_start} - {date_end}')
     df_list = []
     # Iterate through the different channels of the device to get all the data
     for channel in ['a', 'b']:
-        logging.debug(f'. . . . channel {channel}: ')
         for type_ in ['primary', 'secondary']:
             channel_id = sensor_info[f'{type_}_id_{channel}']
             api_key = sensor_info[f'{type_}_key_{channel}']
             # Error handling in the downloading process
-            errors = 0
+            errors = 0; df = None;
             while errors < 5:
                 try:  # get the data
                     df = ts_request(channel_id, date_start, api_key,
@@ -259,24 +257,36 @@ def dl_sensor_week(sensor_info: dict, date_start: dt.datetime,
                     break
                 except ConnectionError:
                     print(f'ts_request failed. Trying again. Previous errors = {errors}')
+                    time.sleep(0.1)
                     errors += 1
             if errors == 5:
                 print(f'Reached maximum tries for channel {channel}, type {type_}, date {date_start} - {date_end}.')
                 print('Skipping')
-            if len(df) > 0:
-                df.insert(loc=1, column='sensor_id', value=sensor_info['sensor_index'])
-                df.insert(loc=2, column='channel', value=channel)
-                df.insert(loc=3, column='subchannel_type', value=type_)
-                df_list.append(df)
-                logging.debug(f'. . . . . . type {type_} ({len(df)})')
-            elif len(df) == 0:
-                # if any of the channels are empty, the data isn't useful
-                logging.debug('NO DATA -- skipping')
-                return None
+                continue
+            if df is not None:
+                if len(df) > 0:
+                    df.insert(loc=1, column='sensor_id', value=sensor_info['sensor_index'])
+                    df.insert(loc=2, column='channel', value=channel)
+                    df.insert(loc=3, column='subchannel_type', value=type_)
+                    df_list.append(df)
+                elif len(df) == 0:
+                    # if any of the channels are empty, the data isn't useful
+                    return None
 
-    if len(df_list) > 0:
-        df2 = pd.concat(df_list)
-        logging.debug(f'\n. . total rows:{len(df2)}')
+    if len(df_list) == 4:
+        try:
+            df2 = pd.concat(df_list, ignore_index=True)
+        except InvalidIndexError:
+            j=0
+            for df in df_list:
+                print(f"sensor {sensor_info['sensor_index']}, df {j}, len {len(df)}")
+                i=0
+                for val in df.index.value_counts():
+                    if val > 1:
+                        print(f'index {i}: {val}')
+                    i += 1
+                j += 1
+            raise
         return df2
     else:
         return None
@@ -343,11 +353,11 @@ def dl_sensor_weeks(sensor_id: Union[str, int, float] = None,
             df_list.append(df_week)
 
     if len(df_list) > 0:
-        df = pd.concat(df_list)
+        df = pd.concat(df_list, ignore_index=True)
     else:
         df = None
     time_taken = dt.datetime.now() - time1
-    print(f'total time: {time_taken}')
+    print(f'{sensor_id :06f} total time: {time_taken}')
     return df, time_taken
 
 
@@ -372,27 +382,34 @@ def dl_sensors(sensor_list, write_lock):
         df, time_taken = dl_sensor_weeks(sensor_id)
         df = df.sort_values(by=['created_at', 'sensor_id', 'channel', 'subchannel_type'])
         filepath = f'{save_dir}/{sensor_id:06d}.csv'
-        df.to_csv(filepath)
+        df.to_csv(filepath, index=False)
         # Sensor done, write success to file
         save_success(sensor_id, time_taken, write_lock)
 
 
 def dl_us_sensors():
-    gdf = dl_sensor_list_in_geography('US')
-    print("# of US Purple Air sensors:", len(gdf))
-    gdf = filter_data(gdf)
-    print("# of US Purple Air sensors after filtering:", len(gdf))
-    # randomize the sensors and pick num_sensors to time
-    np.random.seed(13)
-    sensor_list = np.random.permutation(gdf.sensor_index)
-    num_sensors = 20
-    sensor_list = sensor_list[:num_sensors]
+    # gdf = dl_sensor_list_in_geography('US')
+    # print("# of US Purple Air sensors:", len(gdf))
+    # gdf = filter_data(gdf)
+    # print("# of US Purple Air sensors after filtering:", len(gdf))
+    # # randomize the sensors and pick num_sensors to time
+    # np.random.seed(13)
+    # sensor_list = np.random.permutation(gdf.sensor_index)
+    # num_sensors = 1000
+    # sensor_list = sensor_list[:num_sensors]
     write_lock = threading.Lock()
     times = []
-    for num_threads in [10, 20]:
+
+    # dl_sensors([25999], write_lock)
+    dl_sensors([4391], write_lock)
+
+
+    for num_threads in [1]:
         logger.info(f'Downloading sensors with {num_threads} threads')
         start = time.perf_counter()
         sensor_lists = np.array_split(sensor_list, num_threads)
+        sensor_lists = [[4391]]
+        print([len(li) for li in sensor_lists])
         threads = []
         for i in range(num_threads):
             s_list = sensor_lists[i]
