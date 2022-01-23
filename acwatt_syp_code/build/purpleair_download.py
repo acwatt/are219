@@ -204,7 +204,6 @@ def ts_request(channel_id, start_date, api_key,
     columns = {key: response.json()['channel'][key] for key in [f'field{k}' for k in range(1, 9)]}
     df = (pd.DataFrame(response.json()['feeds'])
           .rename(columns=columns))
-    print(columns)
     return df
 
 
@@ -268,25 +267,15 @@ def dl_sensor_week(sensor_info: dict, date_start: dt.datetime,
                     df.insert(loc=1, column='sensor_id', value=sensor_info['sensor_index'])
                     df.insert(loc=2, column='channel', value=channel)
                     df.insert(loc=3, column='subchannel_type', value=type_)
+                    # Drop any "unused" or "Unused" columns to prevent pd.concat error
+                    for col in [col for col in df.columns if col.lower() == "unused"]:
+                        df.drop(col, axis=1)
                     df_list.append(df)
                 elif len(df) == 0:
                     # if any of the channels are empty, the data isn't useful
                     return None
-
     if len(df_list) == 4:
-        try:
-            df2 = pd.concat(df_list, ignore_index=True)
-        except InvalidIndexError:
-            j=0
-            for df in df_list:
-                print(f"sensor {sensor_info['sensor_index']}, df {j}, len {len(df)}")
-                i=0
-                for val in df.index.value_counts():
-                    if val > 1:
-                        print(f'index {i}: {val}')
-                    i += 1
-                j += 1
-            raise
+        df2 = pd.concat(df_list, ignore_index=True)
         return df2
     else:
         return None
@@ -398,11 +387,11 @@ def dl_us_sensors():
     # num_sensors = 1000
     # sensor_list = sensor_list[:num_sensors]
     write_lock = threading.Lock()
-    times = []
 
     # dl_sensors([25999], write_lock)
+    times = []
+    dl_sensors([25999], write_lock)
     dl_sensors([4391], write_lock)
-
 
     for num_threads in [1]:
         logger.info(f'Downloading sensors with {num_threads} threads')
