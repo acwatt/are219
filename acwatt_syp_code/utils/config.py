@@ -78,17 +78,9 @@ class PurpleAirSettings:
     def __init__(self):
         self.url = 'https://api.purpleair.com/v1/sensors'
         namespace = "purpleair_api"
-        try:
-            self.read_key = keyring.get_credential(namespace, "read_key").password
-            # self.write_key = keyring.get_credential(namespace, "write_key").password
-            # Write key not used currently
-        except AttributeError:
-            self.read_key = input("Please paste your PurpleAir read key here\n"
-                               "This will be saved to your computer's encrypted keyring:")
-            keyring.set_password(namespace, "read_key", self.read_key)
-            # self.write_key = input("Please paste your PurpleAir write key here\n"
-            #                    "This will be saved to your computer's encrypted keyring:")
-            # keyring.set_password(namespace, "write_key", self.write_key)
+
+        for attr in ["read_key"]:
+            set_password(self, attr, namespace)
 
 
 class AWSSettings:
@@ -100,17 +92,8 @@ class AWSSettings:
         self.region = 'us-west-1'  # Northern CA
         self.python_version = '3.8'
 
-        try:
-            self.account_id = keyring.get_credential(namespace, "account_id").password
-            self.access_key = keyring.get_credential(namespace, "access_key").password
-            self.secret_key = keyring.get_credential(namespace, "secret_key").password
-        except AttributeError:
-            self.access_key = input("Please paste your AWS IAM role access key here\n"
-                               "This will be saved to your computer's encrypted keyring:")
-            self.secret_key = input("Please paste your AWS IAM role secret key here\n"
-                               "This will be saved to your computer's encrypted keyring:")
-            keyring.set_password(namespace, "access_key", self.access_key)
-            keyring.set_password(namespace, "secret_key", self.secret_key)
+        for attr in ["account_id", "access_key", "secret_key"]:
+            set_password(self, attr, namespace)
 
 
 # FUNCTIONS --------------------------
@@ -123,6 +106,18 @@ def start_log():
     streamer.setFormatter(formatter)
     streamer.setLevel(logging.INFO)
     logging.getLogger().addHandler(streamer)
+
+
+def set_password(self, attr, namespace):
+    try:
+        value = keyring.get_credential(namespace, attr).password
+        if value is None:
+            raise AttributeError
+    except AttributeError:
+        value = input(f"Please paste your {namespace} {attr.replace('_', ' ')} here\n"
+                      "This will be saved to your computer's encrypted keyring:")
+        keyring.set_password(namespace, attr, value)
+    setattr(self, attr, value)
 
 
 # MAIN -------------------------------
