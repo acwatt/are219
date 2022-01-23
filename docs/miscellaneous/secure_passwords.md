@@ -62,7 +62,7 @@ keyring.set_password(namespace1, "access_key", "your IAM role access key here")
 keyring.set_password(namespace1, "secret_key", "your IAM role secret key here")
 
 namespace2 = "purpleair_api"
-keyring.set_password(namespace1, "read_key", "your PurpleAir read key here")
+keyring.set_password(namespace2, "read_key", "your PurpleAir read key here")
 # keyring.set_password(namespace1, "write_key", "your PurpleAir write key here")
 # write key not used currently
 ```
