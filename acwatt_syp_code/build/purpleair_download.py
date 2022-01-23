@@ -268,11 +268,10 @@ def dl_sensor_week(sensor_info: dict, date_start: dt.datetime,
                     df.insert(loc=2, column='channel', value=channel)
                     df.insert(loc=3, column='subchannel_type', value=type_)
                     # Drop any "unused" or "Unused" columns to prevent pd.concat error
-                    for col in [col for col in df.columns if col.lower() == "unused"]:
-                        df.drop(col, axis=1)
+                    for col in set([col for col in df.columns if col.lower() == "unused"]):
+                        df = df.drop(col, axis=1)
                     df_list.append(df)
-                elif len(df) == 0:
-                    # if any of the channels are empty, the data isn't useful
+                else:  # if any of the channels are empty, the data isn't useful
                     return None
     if len(df_list) == 4:
         df2 = pd.concat(df_list, ignore_index=True)
@@ -390,14 +389,13 @@ def dl_us_sensors():
 
     # dl_sensors([25999], write_lock)
     times = []
-    dl_sensors([25999], write_lock)
+    # dl_sensors([25999], write_lock)
     dl_sensors([4391], write_lock)
 
-    for num_threads in [1]:
+    for num_threads in [10]:
         logger.info(f'Downloading sensors with {num_threads} threads')
         start = time.perf_counter()
         sensor_lists = np.array_split(sensor_list, num_threads)
-        sensor_lists = [[4391]]
         print([len(li) for li in sensor_lists])
         threads = []
         for i in range(num_threads):
