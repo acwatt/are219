@@ -19,6 +19,8 @@ import random
 import requests
 import time
 import zipfile
+import threading
+from multiprocessing.pool import ThreadPool
 
 # Third-party imports
 import boto3
@@ -26,9 +28,11 @@ from botocore.exceptions import ClientError
 from ratelimiter import RateLimiter
 
 # Local imports
-from ...utils.config import PATHS, AWS
+from ...utils.config import PATHS, AWS, PA
 
 logger = logging.getLogger(__name__)
+WRITE_LOCK = threading.Lock()
+PRINT_LOCK = threading.Lock()
 
 
 def exponential_retry(func, error_code, *func_args, **func_kwargs):
@@ -222,7 +226,8 @@ def deploy_lambda_function(aws_objects, function_name):
             Role=aws_objects['iam_role'].arn,
             Handler=aws_objects['lambda_handler_name'],
             Code={'ZipFile': aws_objects['deployment_package']},
-            Publish=True)
+            Publish=True,
+            Timeout=900)
         return response['FunctionArn']
 
     try:
@@ -287,10 +292,13 @@ def invoke_lambda_function(lambda_client, function_name, function_params):
     try:
         response = lambda_client.invoke(
             FunctionName=function_name,
-            Payload=json.dumps(function_params).encode())
-        logger.info("Invoked function %s.", function_name)
+            Payload=json.dumps(function_params).encode(),
+        )
+        with WRITE_LOCK:
+            logger.info("Invoked function %s.", function_name)
     except ClientError:
-        logger.exception("Couldn't invoke function %s.", function_name)
+        with WRITE_LOCK:
+            logger.exception("Couldn't invoke function %s.", function_name)
         raise
     return response
 
@@ -300,8 +308,12 @@ def start_lambda(aws_objects,
                  lambda_params,
                  lambda_function_name):
     """"""
-    logger.info(f"Deploying sensor-specific lambda function for sensor "
-                f"{lambda_params['sensor_id']}")
+    create_function(lambda_function_name, aws_objects)
+    run_function(lambda_function_name, aws_objects, lambda_params)
+
+
+def create_function(lambda_function_name, aws_objects):
+    logger.info(f"Deploying lambda function {lambda_function_name}")
 
     # Keep trying to create the function until the role is available
     exponential_retry(
@@ -318,13 +330,18 @@ def start_lambda(aws_objects,
     package_name_list = ['numpy', 'pandas', 'requests']
     add_package_layers(lambda_function_name, lambda_client, package_name_list)
 
+
+@RateLimiter(max_calls=1, period=0.2)
+def run_function(lambda_function_name, aws_objects, lambda_params):
     # Run the function!
-    logger.info(f"Directly invoking function {lambda_function_name}")
-    response = invoke_lambda_function(lambda_client,
+    response = invoke_lambda_function(aws_objects['lambda_client'],
                                       lambda_function_name,
                                       lambda_params)
+    sensor_id = lambda_params['sensor_id']
     result = json.load(response['Payload'])
-    print(f"Downloading and saving of sensor {lambda_params['sensor_id']} resulted in {result}")
+    with PRINT_LOCK:
+        print(f"Downloading and saving of sensor {sensor_id} resulted in {result}")
+    return result
 
 
 def setup_aws_objects(function_filename, role_name):
@@ -381,8 +398,9 @@ def start_function(sensor_tuple, aws_objects):
     lambda_params = {'sensor_id': sensor_id,
                      'bucket_name': AWS.bucket_name,
                      'date_created': dt.datetime.utcfromtimestamp(date_created).strftime('%Y-%m-%d'),
-                     'last_modified': dt.datetime.utcfromtimestamp(last_modified).strftime('%Y-%m-%d')}
-    lambda_function_name = f'PA_download_{sensor_id}'
+                     'last_modified': dt.datetime.utcfromtimestamp(last_modified).strftime('%Y-%m-%d'),
+                     'PA_api_key': PA.read_key}
+    lambda_function_name = f'PA_download_{sensor_id:07d}'
     start_lambda(aws_objects,
                  lambda_params,
                  lambda_function_name)
@@ -390,19 +408,22 @@ def start_function(sensor_tuple, aws_objects):
     return lambda_function_name
 
 
-def lambda_series(sensor_tuples):
+def lambda_series(sensor_tuples, max_threads: int = 10):
     """Start a lambda function for each id in id_list
 
     For each id in id_list, start a uniquely-named function
     @param sensor_tuples: list of tuples:
         [0] Purple Air sensor id to download data for,
         [1]
+    @param max_threads: max number of parallel processes to run
     """
     # Setup AWS objects
     lambda_function_filename = 'lambda_download_script.py'
+    lambda_function_filename = 'lambda_timing_test_script.py'
     lambda_role_name = 'demo-lambda-role-S3-ip-upload'
     aws_objects = setup_aws_objects(lambda_function_filename, lambda_role_name)
     aws_objects['lambda_handler_name'] = 'lambda_download_script.lambda_ip_s3_writer'
+    aws_objects['lambda_handler_name'] = 'lambda_timing_test_script.time_test'
 
     # Deploy a new Lambda function for each id
     function_list = []
@@ -414,16 +435,63 @@ def lambda_series(sensor_tuples):
     teardown_aws_objects(aws_objects, function_list)
 
 
-def save_pa_data_to_s3():
+def save_pa_data_to_s3(sensor_tuple):
+
     sensors = [25999, 26003, 26005, 26011, 26013]
     date_created_list = [1632955574, 1632955612, 1632955594, 1446763462, 1632955644]
     last_modified_list = [1635632829, 1634149424, 1634410114, 1633665195, 1635632829]
     sensor_tuples = [t for t in zip(sensors, date_created_list, last_modified_list)]
-
-    sensor_tuples = [()]
-
     lambda_series(sensor_tuples)
     print('DONE WITH SAVING PURPLE AIR DATA')
+
+
+def process_sensors(df, function_name, aws_objects, max_threads: int = 10):
+    pool = ThreadPool(processes=max_threads)
+    results = []
+    lambda_params = {'bucket_name': AWS.bucket_name,
+                     'PA_api_key': PA.read_key}
+    for sensor_id in df.sensor_index:
+        lambda_params['sensor_id'] = int(sensor_id)
+        with PRINT_LOCK: print(f"Starting {sensor_id :07d} download.")
+        results.append(pool.apply_async(run_function, (function_name, aws_objects, lambda_params)))
+
+    pool.close()  # Done adding tasks.
+    pool.join()  # Wait for all tasks to complete.
+    return results
+
+
+def save_sensors_to_s3(sensor_df, max_threads: int = 10):
+    """Create and use a lambda function to save Purple Air data to S3 bucket.
+
+    @param sensor_df: pandas dataframe of Purple Air sensors to download data for.
+    @param max_threads: max # of lambda function uses to run at the same time.
+                        # between 1 and 1000
+    """
+    # Setup AWS objects
+    # lambda_function_filename = 'lambda_download_script.py'
+    lambda_function_filename = 'lambda_timing_test_script.py'
+    lambda_role_name = 'demo-lambda-role-S3-ip-upload'
+    aws_objects = setup_aws_objects(lambda_function_filename, lambda_role_name)
+    # aws_objects['lambda_handler_name'] = 'lambda_download_script.lambda_ip_s3_writer'
+    aws_objects['lambda_handler_name'] = 'lambda_timing_test_script.time_test'
+
+    # Create lambda function
+    # lambda_function_name = f'PA_download'
+    lambda_function_name = f'timing_test'
+    create_function(lambda_function_name, aws_objects)
+
+    # Apply function to each sensor, with max_threads functions running simultaneously
+    results = process_sensors(sensor_df, lambda_function_name, aws_objects,
+                              max_threads=max_threads)
+    a = results[0]
+    try:
+        a.get()
+    except:
+        pass
+    print(results)
+
+    # Delete all roles and functions
+    teardown_aws_objects(aws_objects, [lambda_function_name])
 
 
 """
@@ -478,7 +546,6 @@ def usage_demo():
         deployment_package)
     # Wait to make sure the function is active
     lambda_client.get_waiter('function_active').wait(FunctionName=lambda_function_name)
-
 
     try:
         print(f"Directly invoking function {lambda_function_name} a few times...")

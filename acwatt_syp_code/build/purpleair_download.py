@@ -11,22 +11,24 @@ import numpy as np
 
 import json
 import pandas as pd
-from pandas.errors import InvalidIndexError
 import requests
 from typing import Optional, Union
 from pathlib import Path
 import threading
+from multiprocessing.pool import ThreadPool
+from http.server import BaseHTTPRequestHandler
 
 # Third-party Imports
-from ratelimiter import RateLimiter
 from timezonefinder import TimezoneFinder
 
 # Local imports
 from ..utils.config import PATHS, PA
 from ..analyze.maps import sensor_df_to_geo
+from .aws.lambda_services import save_sensors_to_s3
 
 logger = logging.getLogger(__name__)
-
+SAVE_DIR = "/tmp/purple_air_data"
+PRINT_LOCK = threading.Lock()
 
 # If retrieving data from multiple sensors at once, please send a single request
 # rather than individual requests in succession.
@@ -69,6 +71,23 @@ def generate_weeks_list(sensor_info_dict: dict,
         return date_list
 
 
+def generate_halfyear_list(sensor_info_dict: dict,
+                        date_start: Union[str, None] = None):
+    """Return list of dates to iterate through for sensor downloading using lambda functions.
+
+    Will return dates for the 1st day of each 6-month period. If date_start = None, then
+    will return dates from the beginning of the sensor data until today.
+    """
+    if date_start is None:
+        date_start = dt.datetime.utcfromtimestamp(sensor_info_dict['date_created'])
+    else:
+        date_start = dt.datetime.strptime(date_start, '%Y-%m-%d')
+    date_start = date_start.date() - dt.timedelta(days=366/2)
+    date_end = dt.datetime.today() + dt.timedelta(days=366/2)
+    date_list = pd.date_range(date_start, dt.datetime.today(), freq='QS')
+    return date_list
+
+
 def get_sensor_timezone(info):
     """Return timezone of sensor located at lat,lon decimal coordinates."""
     lat, lon = info['latitude'], info['longitude']
@@ -92,6 +111,16 @@ def filter_data(gdf):
            .query('confidence_auto > 75')
            .query('position_rating > 1'))
     return gdf
+
+
+def print_with_lock(message, lock):
+    with lock:
+        print(message)
+
+
+def lookup_url_code(status_code):
+    d = {k.value: m[1] for k, m in BaseHTTPRequestHandler.responses.items()}
+    return d[status_code]
 
 
 ################################################################################
@@ -166,7 +195,7 @@ def dl_sensor_list_in_geography(extent: str='US',
 
 
 def make_data_dir():
-    dir_ = "/tmp/purple_air_data"
+    dir_ = SAVE_DIR
     if not(os.path.isdir(dir_)):  # doesn't exist
         os.mkdir(dir_)
     return dir_
@@ -200,7 +229,21 @@ def ts_request(channel_id, start_date, api_key,
     if timezone is not None:
         query['timezone'] = timezone
     query_str = "&".join("%s=%s" % (k, v) for k, v in query.items())
-    response = requests.get(url, params=query_str)
+    status_code = 300
+    wait_time = 0.5
+    while status_code >= 300 and wait_time < 100:
+        response = requests.get(url, params=query_str)
+        status_code = response.status_code
+        m = f"Got status code {status_code} for TS channel {channel_id}. Waiting {wait_time}."
+        if status_code >= 300: print_with_lock(m, PRINT_LOCK)
+        time.sleep(wait_time)
+        wait_time = wait_time*2
+
+    if response.status_code >= 300:
+        error_message = lookup_url_code(response.status_code)
+        print('HTTP Error:', response.status_code)
+        print(error_message)
+        raise requests.exceptions.HTTPError
     columns = {key: response.json()['channel'][key] for key in [f'field{k}' for k in range(1, 9)]}
     df = (pd.DataFrame(response.json()['feeds'])
           .rename(columns=columns))
@@ -231,7 +274,7 @@ def ts_example():
 
 
 def dl_sensor_week(sensor_info: dict, date_start: dt.datetime,
-                   average: int = 60):
+                   average: int = 60, print_lock: threading.Lock = None):
     """Download a week's (hourly) averages of data for sensor from all 4 channels.
 
     @param sensor_info: information about sensor
@@ -240,6 +283,7 @@ def dl_sensor_week(sensor_info: dict, date_start: dt.datetime,
     """
     date_end = date_start + dt.timedelta(days=7)
     timezone = get_sensor_timezone(sensor_info)
+    # with print_lock: print(date_start)
 
     df_list = []
     # Iterate through the different channels of the device to get all the data
@@ -254,7 +298,7 @@ def dl_sensor_week(sensor_info: dict, date_start: dt.datetime,
                     df = ts_request(channel_id, date_start, api_key,
                                     end_date=date_end, average=average, timezone=timezone)
                     break
-                except ConnectionError:
+                except ConnectionError or requests.exceptions.HTTPError:
                     print(f'ts_request failed. Trying again. Previous errors = {errors}')
                     time.sleep(0.1)
                     errors += 1
@@ -280,7 +324,8 @@ def dl_sensor_week(sensor_info: dict, date_start: dt.datetime,
         return None
 
 
-def dl_sensor_weeks(sensor_id: Union[str, int, float] = None,
+def dl_sensor_weeks(sensor_id: Union[str, int, float],
+                    print_lock: threading.Lock,
                     date_start: Optional[str] = None,
                     average: Optional[int] = None):
     """Download all data for PurpleAir sensor, one week at a time, then concatenate.
@@ -317,6 +362,8 @@ def dl_sensor_weeks(sensor_id: Union[str, int, float] = None,
     df_total = pd.concat(dfs).sort_values('created_at')
 
     :param sensor_id: str, int, float: PurpleAir sensor ID.
+    :param print_lock: thread lock to prevent multiple threads from printing on
+                       the same line.
     :param date_start: str: date that we should begin downloading data for. If
                             omitted, the created_date of the sensor will be used
                             as start date, so all historical data will be
@@ -334,7 +381,7 @@ def dl_sensor_weeks(sensor_id: Union[str, int, float] = None,
     df_list = []
     logging.debug(f'\nDownloading all weeks for sensor {sensor_id} ===================')
     for start_date in week_starts:
-        df_week = dl_sensor_week(sensor_info, start_date)
+        df_week = dl_sensor_week(sensor_info, start_date, print_lock=print_lock)
         if df_week is None:
             continue
         else:
@@ -345,7 +392,8 @@ def dl_sensor_weeks(sensor_id: Union[str, int, float] = None,
     else:
         df = None
     time_taken = dt.datetime.now() - time1
-    print(f'{sensor_id :06f} total time: {time_taken}')
+    with print_lock:
+        print(f'{sensor_id :07d} total time: {time_taken}')
     return df, time_taken
 
 
@@ -354,7 +402,9 @@ def save_success(sensor_id, time_taken, write_lock):
     df = pd.DataFrame({'sensor_id': sensor_id, 'time_taken': time_taken},
                       index=[sensor_id])
     try:
-        df_old = pd.read_csv(filepath)
+        # If another thread is writing, we may read an empty file. Better lock it.
+        with write_lock:
+            df_old = pd.read_csv(filepath)
         df = pd.concat([df_old, df])
     except FileNotFoundError:
         pass
@@ -362,58 +412,105 @@ def save_success(sensor_id, time_taken, write_lock):
         df.to_csv(filepath, index=False)
 
 
-def dl_sensors(sensor_list, write_lock):
-    """Save data for each sensor to local CSV"""
-    save_dir = make_data_dir()
+def read_success():
+    filepath = PATHS.data.purpleair / 'sensors_downloaded.csv'
+    df = pd.read_csv(filepath)
+    return df
 
+
+def dl_sensor(sensor_id, write_lock, print_lock):
+    print_with_lock(f'Starting sensor {sensor_id}', print_lock)
+    df, time_taken = dl_sensor_weeks(sensor_id, print_lock)
+    df = df.sort_values(by=['created_at', 'sensor_id', 'channel', 'subchannel_type'])
+    filepath = f'{SAVE_DIR}/{sensor_id:07d}.csv'
+    df.to_csv(filepath, index=False)
+    # Sensor done, write success to file
+    save_success(sensor_id, time_taken, write_lock)
+
+
+def dl_sensors(sensor_list, write_lock, print_lock, i: int = None):
+    """Save data for each sensor to local CSV"""
     for sensor_id in sensor_list:
-        df, time_taken = dl_sensor_weeks(sensor_id)
-        df = df.sort_values(by=['created_at', 'sensor_id', 'channel', 'subchannel_type'])
-        filepath = f'{save_dir}/{sensor_id:06d}.csv'
-        df.to_csv(filepath, index=False)
-        # Sensor done, write success to file
-        save_success(sensor_id, time_taken, write_lock)
+        dl_sensor(sensor_id, write_lock, print_lock)
+
+
+def save_sensor_list(geography, download_oldest_first=True):
+    fp = PATHS.data.temp / 'sensors_filtered.csv'
+    if fp.exists():
+        print(f'Loading sensor list from {fp}')
+        df = pd.read_csv(fp)
+        print("# of US Purple Air sensors after filtering:", len(df))
+    else:
+        gdf = dl_sensor_list_in_geography(geography)
+        print("# of US Purple Air sensors:", len(gdf))
+        gdf = filter_data(gdf)
+        gdf.to_csv(fp)
+        df = pd.read_csv(fp)
+        print("# of US Purple Air sensors after filtering:", len(df))
+    # Sort so oldest are downloaded first
+    # the function will download sensors top to bottom
+    # so we need to sort so the oldest are first (ascending=True)
+    df = df.sort_values('date_created', ascending=download_oldest_first)
+    return df
+
+
+def process_sensors(df, max_threads: int = 10):
+    pool = ThreadPool(processes=max_threads)
+    results = []
+    write_lock = threading.Lock()
+    index_list = df.index.to_list()
+    while index_list:
+        idx = index_list.pop()
+        row = df.iloc[idx]
+        sensor_id = row.sensor_index
+        results.append(pool.apply_async(save_sensor_to_s3, (sensor_id, write_lock, PRINT_LOCK)))
+
+    pool.close()  # Done adding tasks.
+    pool.join()  # Wait for all tasks to complete.
 
 
 def dl_us_sensors():
-    # gdf = dl_sensor_list_in_geography('US')
-    # print("# of US Purple Air sensors:", len(gdf))
-    # gdf = filter_data(gdf)
-    # print("# of US Purple Air sensors after filtering:", len(gdf))
-    # # randomize the sensors and pick num_sensors to time
+    df = save_sensor_list('US', download_oldest_first=False)
+    # randomize the sensors and pick num_sensors to time
     # np.random.seed(13)
-    # sensor_list = np.random.permutation(gdf.sensor_index)
-    # num_sensors = 1000
+    # sensor_list = list(np.random.permutation(df.sensor_index))
+    num_sensors = 20
     # sensor_list = sensor_list[:num_sensors]
-    write_lock = threading.Lock()
+    # write_lock = threading.Lock()
+    # print_lock = threading.Lock()
+    make_data_dir()
+    df = df.head(n=num_sensors)
+    # dl_sensors([77527], write_lock, print_lock)
 
-    # dl_sensors([25999], write_lock)
-    times = []
-    # dl_sensors([25999], write_lock)
-    dl_sensors([4391], write_lock)
+    num_threads = 10
+    logger.info(f'Downloading sensors with {num_threads} threads')
+    start = time.perf_counter()
+    # Create lambda function
 
-    for num_threads in [10]:
-        logger.info(f'Downloading sensors with {num_threads} threads')
-        start = time.perf_counter()
-        sensor_lists = np.array_split(sensor_list, num_threads)
-        print([len(li) for li in sensor_lists])
-        threads = []
-        for i in range(num_threads):
-            s_list = sensor_lists[i]
-            args = (s_list, write_lock)
-            thread = threading.Thread(target=dl_sensors, args=args)
-            thread.start()
-            threads.append(thread)
+    # Use function to save sensors to S3
+    # process_sensors(df, max_threads=num_threads)
+    save_sensors_to_s3(df, max_threads=num_threads)
+    # Delete function
 
-        # Wait for all threads to finish
-        for thread in threads:
-            thread.join()
-        t = round((time.perf_counter() - start)/60, 2)
-        print(f'TIME: {t} minutes')
-        times.append([num_threads, t/num_sensors])
+    # sensor_lists = np.array_split(sensor_list, num_threads)
+    # print('# sensors in each list:', [len(li) for li in sensor_lists])
+    # threads = []
+    # for i in range(num_threads):
+    #     s_list = sensor_lists[i]
+    #     args = (s_list, write_lock, print_lock, i)
+    #     thread = threading.Thread(target=dl_sensors, args=args)
+    #     thread.start()
+    #     threads.append(thread)
+    #
+    # # Wait for all threads to finish
+    # for thread in threads:
+    #     thread.join()
 
-    print('Average times:')
-    print(times)
+    t = round((time.perf_counter() - start)/60, 2)
+    print(f'TOTAL TIME: {t} minutes')
+    print(f'AVERAGE TIME for {num_threads} threads: {t/num_sensors}')
+    # Read successful download/uploads and return
+    df = read_success()
 
 
 def update_loc_lookup(df, output=False):
