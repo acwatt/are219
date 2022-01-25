@@ -476,13 +476,14 @@ def dl_us_sensors():
     # randomize the sensors and pick num_sensors to time
     # np.random.seed(13)
     # sensor_list = list(np.random.permutation(df.sensor_index))
-    num_sensors = 20
+    num_sensors = 1
     # sensor_list = sensor_list[:num_sensors]
     # write_lock = threading.Lock()
     # print_lock = threading.Lock()
     make_data_dir()
     df = df.head(n=num_sensors)
-    # dl_sensors([77527], write_lock, print_lock)
+
+    dl_sensors([77527], WRITE_LOCK, PRINT_LOCK)
 
     num_threads = 10
     logger.info(f'Downloading sensors with {num_threads} threads')
@@ -490,8 +491,8 @@ def dl_us_sensors():
     # Create lambda function
 
     # Use function to save sensors to S3
-    # process_sensors(df, max_threads=num_threads)
-    save_sensors_to_s3(df, max_threads=num_threads)
+    process_sensors(df, max_threads=num_threads)
+    # save_sensors_to_s3(df, max_threads=num_threads)
     # Delete function
 
     # sensor_lists = np.array_split(sensor_list, num_threads)
