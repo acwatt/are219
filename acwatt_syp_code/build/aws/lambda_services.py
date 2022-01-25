@@ -445,40 +445,6 @@ def save_pa_data_to_s3(sensor_tuple):
     print('DONE WITH SAVING PURPLE AIR DATA')
 
 
-def save_sensors_to_s3(sensor_df, max_threads: int = 10):
-    """Create and use a lambda function to save Purple Air data to S3 bucket.
-
-    @param sensor_df: pandas dataframe of Purple Air sensors to download data for.
-    @param max_threads: max # of lambda function uses to run at the same time.
-                        # between 1 and 1000
-    """
-    # Setup AWS objects
-    # lambda_function_filename = 'lambda_download_script.py'
-    lambda_function_filename = 'lambda_timing_test_script.py'
-    lambda_role_name = 'demo-lambda-role-S3-ip-upload'
-    aws_objects = setup_aws_objects(lambda_function_filename, lambda_role_name)
-    # aws_objects['lambda_handler_name'] = 'lambda_download_script.lambda_ip_s3_writer'
-    aws_objects['lambda_handler_name'] = 'lambda_timing_test_script.time_test'
-
-    # Create lambda function
-    # lambda_function_name = f'PA_download'
-    lambda_function_name = f'timing_test'
-    create_function(lambda_function_name, aws_objects)
-
-    # Apply function to each sensor, with max_threads functions running simultaneously
-    results = process_sensors(sensor_df, lambda_function_name, aws_objects,
-                              max_threads=max_threads)
-    a = results[0]
-    try:
-        a.get()
-    except:
-        pass
-    print(results)
-
-    # Delete all roles and functions
-    teardown_aws_objects(aws_objects, [lambda_function_name])
-
-
 """
 NOTES:
 
