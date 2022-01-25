@@ -71,20 +71,30 @@ def generate_weeks_list(sensor_info_dict: dict,
         return date_list
 
 
-def generate_halfyear_list(sensor_info_dict: dict,
-                        date_start: Union[str, None] = None):
+def round_down_halfyear(dt_obj):
+    # Round month down to beginning of 6-month period
+    month = 1 + round(dt_obj.month/12) * 6
+    return dt.date(dt_obj.year, month, 1)
+
+
+def round_up_halfyear(dt_obj):
+    # Add 6 months and round down
+    dt_obj = dt_obj + dt.timedelta(days=366/2)
+    return round_down_halfyear(dt_obj)
+
+
+def generate_halfyear_list(sensor_id: int):
     """Return list of dates to iterate through for sensor downloading using lambda functions.
 
-    Will return dates for the 1st day of each 6-month period. If date_start = None, then
-    will return dates from the beginning of the sensor data until today.
+    Will return dates for the 1st day of each 6-month period.
     """
-    if date_start is None:
-        date_start = dt.datetime.utcfromtimestamp(sensor_info_dict['date_created'])
-    else:
-        date_start = dt.datetime.strptime(date_start, '%Y-%m-%d')
-    date_start = date_start.date() - dt.timedelta(days=366/2)
-    date_end = dt.datetime.today() + dt.timedelta(days=366/2)
-    date_list = pd.date_range(date_start, dt.datetime.today(), freq='QS')
+    sensor_info_dict = pa_request_single_sensor(sensor_id)['sensor']
+    date_start = dt.datetime.utcfromtimestamp(sensor_info_dict['date_created'])
+    # Round start date down to the nearest 6 month period
+    date_start = round_down_halfyear(date_start)
+    date_end = round_up_halfyear(dt.datetime.today())
+    date_list = pd.date_range(date_start, date_end, freq='QS')
+    date_list = [date_list[i].date() for i in range(len(date_list)) if i % 2 ==0]
     return date_list
 
 
