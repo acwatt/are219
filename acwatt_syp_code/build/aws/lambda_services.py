@@ -445,21 +445,6 @@ def save_pa_data_to_s3(sensor_tuple):
     print('DONE WITH SAVING PURPLE AIR DATA')
 
 
-def process_sensors(df, function_name, aws_objects, max_threads: int = 10):
-    pool = ThreadPool(processes=max_threads)
-    results = []
-    lambda_params = {'bucket_name': AWS.bucket_name,
-                     'PA_api_key': PA.read_key}
-    for sensor_id in df.sensor_index:
-        lambda_params['sensor_id'] = int(sensor_id)
-        with PRINT_LOCK: print(f"Starting {sensor_id :07d} download.")
-        results.append(pool.apply_async(run_function, (function_name, aws_objects, lambda_params)))
-
-    pool.close()  # Done adding tasks.
-    pool.join()  # Wait for all tasks to complete.
-    return results
-
-
 def save_sensors_to_s3(sensor_df, max_threads: int = 10):
     """Create and use a lambda function to save Purple Air data to S3 bucket.
 
