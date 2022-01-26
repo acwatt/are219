@@ -18,5 +18,6 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     logger.info('START')
     pad.dl_us_sensors()
+    # pad.test_lambda()
     # lambda_services.save_pa_data_to_s3()
     logger.info('DONE')

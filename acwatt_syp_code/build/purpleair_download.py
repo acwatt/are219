@@ -30,6 +30,7 @@ from ..build.aws.lambda_services import (
     teardown_aws_objects,
     setup_aws_objects
 )
+from ..build.aws.lambda_timing_test_script import thread_test
 
 logger = logging.getLogger(__name__)
 SAVE_DIR = "/tmp/purple_air_data"
@@ -137,7 +138,7 @@ def lookup_url_code(status_code):
 def pa_request_single_sensor(sensor_id):
     api_key = PA.read_key
     url = f'https://api.purpleair.com/v1/sensors/{sensor_id}'
-    fields = 'name, date_created, last_modified, latitude, longitude, position_rating, ' \
+    fields = 'name, date_created, last_seen, last_modified, latitude, longitude, position_rating, ' \
              'pm2.5, primary_id_a, primary_key_a, secondary_id_a, secondary_key_a, ' \
              'primary_id_b, primary_key_b, secondary_id_b, secondary_key_b'
     query = {'api_key': api_key, 'fields': fields.replace(' ', '')}
@@ -462,7 +463,7 @@ def save_sensor_list(geography, download_oldest_first=True):
     return df
 
 
-def save_sensors_to_s3(sensor_df, max_threads: int = 10):
+def save_sensors_to_s3(sensor_df, max_threads: int = 10, time_between_lambdas: float = 1.0):
     """Create and use a lambda function to save Purple Air data to S3 bucket.
 
     @param sensor_df: pandas dataframe of Purple Air sensors to download data for.
@@ -471,74 +472,82 @@ def save_sensors_to_s3(sensor_df, max_threads: int = 10):
     """
     # Setup AWS objects
     lambda_function_filename = 'lambda_download_script.py'
+    lambda_function_filename = 'lambda_timing_test_script.py'
     lambda_role_name = 'demo-lambda-role-S3-ip-upload'
     aws_objects = setup_aws_objects(lambda_function_filename, lambda_role_name)
     aws_objects['lambda_handler_name'] = 'lambda_download_script.lambda_ip_s3_writer'
+    aws_objects['lambda_handler_name'] = 'lambda_timing_test_script.thread_test'
     # Create lambda function
     lambda_function_name = f'PA_download'
-    create_function(lambda_function_name, aws_objects)
-    # Apply function to each sensor, with max_threads functions running simultaneously
-    results = process_sensors(sensor_df, lambda_function_name, aws_objects,
-                              max_threads=max_threads)
+    lambda_function_name = f'time_test_function'
+    try:
+        create_function(lambda_function_name, aws_objects, concurrency=max_threads+50)
+        # Apply function to each sensor, with max_threads functions running simultaneously
+        results = process_sensors(sensor_df, lambda_function_name, aws_objects,
+                                  max_threads=max_threads,
+                                  time_between_lambdas=time_between_lambdas)
+
+        for result in results:
+            try:
+                print(result.get()['ip'])
+            except:
+                pass
     # Delete all roles and functions
-    teardown_aws_objects(aws_objects, [lambda_function_name])
+    finally:
+        teardown_aws_objects(aws_objects, [lambda_function_name])
 
 
-def process_sensors(df, function_name, aws_objects, max_threads: int = 10):
+def process_sensors(df, function_name, aws_objects,
+                    max_threads: int = 10, time_between_lambdas: float = 1.0):
     pool = ThreadPool(processes=max_threads)
     results = []
     lambda_params = {'bucket_name': AWS.bucket_name,
-                     'PA_api_key': PA.read_key}
+                     'PA_api_key': PA.read_key,
+                     'max_threads': 10,
+                     'time_between_processes': 2.5}
+    logger.info(f"Processing {len(df)} sensors.")
     for sensor_id in df.sensor_index:
         lambda_params['sensor_id'] = int(sensor_id)
-        half_year_beginnings = generate_halfyear_list(sensor_id)
-        for start_date in half_year_beginnings:
-            lambda_params['start_date'] = dt.datetime.strftime(start_date, "%Y-%m-%d")
-            with PRINT_LOCK: print(f"Starting {sensor_id :07d} download for {start_date}.")
-            results.append(pool.apply_async(run_function, (function_name, aws_objects, lambda_params)))
+        sensor_info = pa_request_single_sensor(sensor_id)['sensor']
+        lambda_params['timezone'] = get_sensor_timezone(sensor_info)
+        print(f"Queing {sensor_id :07d} download")
+        results.append(pool.apply_async(run_function, (function_name, aws_objects, lambda_params.copy())))
+        time.sleep(time_between_lambdas)
 
     pool.close()  # Done adding tasks.
     pool.join()  # Wait for all tasks to complete.
     return results
 
 
+def test_lambda():
+    logger.info('testing lambda function code thread_test()')
+    params = {'max_threads': 10,
+              'sensor_id': 25999,
+              'PA_api_key': PA.read_key}
+    thread_test(params, None)
+
+
 def dl_us_sensors():
-    df = save_sensor_list('US', download_oldest_first=False)
-    # randomize the sensors and pick num_sensors to time
-    # np.random.seed(13)
-    # sensor_list = list(np.random.permutation(df.sensor_index))
-    num_sensors = 1
-    # sensor_list = sensor_list[:num_sensors]
-    # write_lock = threading.Lock()
-    # print_lock = threading.Lock()
+    df = save_sensor_list('US', download_oldest_first=True)
+    num_sensors = 100
     make_data_dir()
     df = df.head(n=num_sensors)
 
-    dl_sensors([77527], WRITE_LOCK, PRINT_LOCK)
+    d = pa_request_single_sensor(162)['sensor']
+    print('Sensor info dict:\n', d)
+    # last_seen = d['last_seen']
+    # print('last_seen:', dt.datetime.utcfromtimestamp(last_seen))
+    # last_modified = d['last_modified']
+    # print('last_modified:', dt.datetime.utcfromtimestamp(last_modified))
+    # dl_sensors([77527], WRITE_LOCK, PRINT_LOCK)
 
     num_threads = 10
     logger.info(f'Downloading sensors with {num_threads} threads')
     start = time.perf_counter()
-    # Create lambda function
 
     # Use function to save sensors to S3
-    process_sensors(df, max_threads=num_threads)
-    # save_sensors_to_s3(df, max_threads=num_threads)
-    # Delete function
-
-    # sensor_lists = np.array_split(sensor_list, num_threads)
-    # print('# sensors in each list:', [len(li) for li in sensor_lists])
-    # threads = []
-    # for i in range(num_threads):
-    #     s_list = sensor_lists[i]
-    #     args = (s_list, write_lock, print_lock, i)
-    #     thread = threading.Thread(target=dl_sensors, args=args)
-    #     thread.start()
-    #     threads.append(thread)
-    #
-    # # Wait for all threads to finish
-    # for thread in threads:
-    #     thread.join()
+    # process_sensors(df, max_threads=num_threads)
+    save_sensors_to_s3(df, max_threads=num_threads, time_between_lambdas=1.0)
 
     t = round((time.perf_counter() - start)/60, 2)
     print(f'TOTAL TIME: {t} minutes')

@@ -24,6 +24,7 @@ from multiprocessing.pool import ThreadPool
 
 # Third-party imports
 import boto3
+from botocore import config as botocore_config
 from botocore.exceptions import ClientError
 from ratelimiter import RateLimiter
 
@@ -33,6 +34,7 @@ from ...utils.config import PATHS, AWS, PA
 logger = logging.getLogger(__name__)
 WRITE_LOCK = threading.Lock()
 PRINT_LOCK = threading.Lock()
+LAMBDA_LOCK = threading.Lock()
 
 
 def exponential_retry(func, error_code, *func_args, **func_kwargs):
@@ -227,7 +229,8 @@ def deploy_lambda_function(aws_objects, function_name):
             Handler=aws_objects['lambda_handler_name'],
             Code={'ZipFile': aws_objects['deployment_package']},
             Publish=True,
-            Timeout=900)
+            Timeout=900,
+            MemorySize=1000)
         return response['FunctionArn']
 
     try:
@@ -295,7 +298,7 @@ def invoke_lambda_function(lambda_client, function_name, function_params):
             Payload=json.dumps(function_params).encode(),
         )
         with WRITE_LOCK:
-            logger.info("Invoked function %s.", function_name)
+            logger.info(f"Invoked function {function_name} for {function_params['sensor_id']}.")
     except ClientError:
         with WRITE_LOCK:
             logger.exception("Couldn't invoke function %s.", function_name)
@@ -312,7 +315,7 @@ def start_lambda(aws_objects,
     run_function(lambda_function_name, aws_objects, lambda_params)
 
 
-def create_function(lambda_function_name, aws_objects):
+def create_function(lambda_function_name, aws_objects, concurrency=200):
     logger.info(f"Deploying lambda function {lambda_function_name}")
 
     # Keep trying to create the function until the role is available
@@ -326,6 +329,12 @@ def create_function(lambda_function_name, aws_objects):
      .get_waiter('function_active')
      .wait(FunctionName=lambda_function_name))
 
+    # Add concurrency (# of parallel instances)
+    response = lambda_client.put_function_concurrency(
+        FunctionName=lambda_function_name,
+        ReservedConcurrentExecutions=concurrency
+    )
+
     # Add dependencies (package layers to make the code runable)
     package_name_list = ['numpy', 'pandas', 'requests']
     add_package_layers(lambda_function_name, lambda_client, package_name_list)
@@ -334,17 +343,27 @@ def create_function(lambda_function_name, aws_objects):
 @RateLimiter(max_calls=1, period=0.2)
 def run_function(lambda_function_name, aws_objects, lambda_params):
     # Run the function!
-    response = invoke_lambda_function(aws_objects['lambda_client'],
+    with PRINT_LOCK:
+        print(f"Starting {lambda_params['sensor_id'] :07d} download")
+    with LAMBDA_LOCK:
+        response = invoke_lambda_function(aws_objects['lambda_client'],
                                       lambda_function_name,
                                       lambda_params)
-    sensor_id = lambda_params['sensor_id']
     result = json.load(response['Payload'])
+    sensor_id = result['sensor_id']
+    successful = result['successful']
     with PRINT_LOCK:
-        print(f"Downloading and saving of sensor {sensor_id} resulted in {result}")
+        print(f"Downloading and saving of sensor {sensor_id} resulted in these weeks being downloaded:\n {successful}")
     return result
 
 
 def setup_aws_objects(function_filename, role_name):
+    config = botocore_config.Config(
+        read_timeout=900,
+        connect_timeout=900,
+        retries={"max_attempts": 0}
+    )
+
     # Create AWS IAM resource instance
     iam_resource = boto3.resource('iam',
                                   aws_access_key_id=AWS.access_key,
@@ -354,7 +373,8 @@ def setup_aws_objects(function_filename, role_name):
     lambda_client = boto3.client('lambda',
                                  region_name=AWS.region,
                                  aws_access_key_id=AWS.access_key,
-                                 aws_secret_access_key=AWS.secret_key)
+                                 aws_secret_access_key=AWS.secret_key,
+                                 config=config)
 
     # Create deployment package (lambda function code)
     print(f"Creating generic AWS Lambda function from {function_filename}.")

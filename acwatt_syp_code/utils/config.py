@@ -78,6 +78,7 @@ class PurpleAirSettings:
     def __init__(self):
         self.url = 'https://api.purpleair.com/v1/sensors'
         namespace = "purpleair_api"
+        self.read_key = None  # placeholder to be filled in below
 
         for attr in ["read_key"]:
             set_password(self, attr, namespace)
@@ -91,6 +92,9 @@ class AWSSettings:
         self.bucket_name = 'purpleair-data'
         self.region = 'us-west-1'  # Northern CA
         self.python_version = '3.8'
+        self.account_id = None  # placeholder for autocomplete, to be filled in below
+        self.access_key = None
+        self.secret_key = None
 
         for attr in ["account_id", "access_key", "secret_key"]:
             set_password(self, attr, namespace)
