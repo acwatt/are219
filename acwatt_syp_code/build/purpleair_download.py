@@ -503,7 +503,7 @@ def process_sensors(df, function_name, aws_objects,
     results = []
     lambda_params = {'bucket_name': AWS.bucket_name,
                      'PA_api_key': PA.read_key,
-                     'max_threads': 10,
+                     'max_threads': 1,
                      'time_between_processes': 2.5}
     logger.info(f"Processing {len(df)} sensors.")
     for sensor_id in df.sensor_index:
@@ -529,7 +529,7 @@ def test_lambda():
 
 def dl_us_sensors():
     df = save_sensor_list('US', download_oldest_first=True)
-    num_sensors = 100
+    num_sensors = 1
     make_data_dir()
     df = df.head(n=num_sensors)
 
@@ -541,7 +541,7 @@ def dl_us_sensors():
     # print('last_modified:', dt.datetime.utcfromtimestamp(last_modified))
     # dl_sensors([77527], WRITE_LOCK, PRINT_LOCK)
 
-    num_threads = 10
+    num_threads = 1
     logger.info(f'Downloading sensors with {num_threads} threads')
     start = time.perf_counter()
 
