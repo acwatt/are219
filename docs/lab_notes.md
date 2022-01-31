@@ -1,3 +1,40 @@
+# 2022-01-28 Meeting with Meredith
+## Data
+- Purple Air
+- Windspeed and direction from North American Regional Reanalysis (NARR)
+    - Meredith said she would ask Ed Rubin about getting hourly data.
+- Get real design values and keep in a 3-way table for comparison (real, pseudo, estimated without missing)
+
+- Learn more about hourly EPA measurements: is it really that accurate? Do I need to collapse to the day level. Eric Zou might know more, or just look it up.
+
+
+## Analysis
+- Lambda function for each sensor
+- how does the differernce between the psuedo design value
+Conditional on the difference, how does the probability of being in a non-attaninment area change with vars we expect to effect it (geography, climate, population) vs vars we are concerned about it (race, income, other demographics)
+
+Andrew Plantenga and ...
+- modeling wildfire spread, looking at real wildfire spread, and can we explain the differences betw in vars that we expect and vars that we are concerned about (demographics)
+
+Two lines of paper:
+- design values (DV) if differences in predicted and reported DV are large and non-random .... biased measure of attainment
+- advisory notices -- are the advisry notices based on EPA data. If the EPA data is not missing at random (biased downward), does this impact advisory notices in any important ways that are correlated with 
+
+Get: 
+- Flow diagram for AQI advisory notices. 
+- EPA actual design values
+
+
+# 2022-01-26
+## Purple Air Lambda Function download partially successful, but getting data another way
+- Purple air downloader using AWS lambda functions was successful, but overly parallized. Meredith got an email from Purple Air asking us to stop the downloading because it was overloading the ThingSpeak servers.
+- Adrian Dybwad <adrian@purpleair.com> asking us to call him. I did and he said they can probably give us the Purple Air data we're looking for using a recently updated Google BigQuery data dump. They have up to Oct 2021. Adrian ask me to send him an email with the request.
+- We're corresponded a couple times -- I've given him a CSV of the sensor IDs I want (2022-01-27). Waiting on a response.
+
+## Continued work
+I've spent too much time on trying to download the PA data. Need to work on:
+- Downloading the wind/temperature data 
+
 # 2022-01-10
 - Creating algorithm map
 - Setup S3 bucket
