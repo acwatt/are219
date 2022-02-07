@@ -46,6 +46,7 @@ class Data:
         self.gis = self.root / 'gis'
         self.gis_county = self.gis / 'cb_2018_us_county_500k' / 'cb_2018_us_county_500k.shp'
         self.gis_state = self.gis / 'cb_2018_us_state_5m' / 'cb_2018_us_state_5m.shp'
+        self.gis_windspeed = self.gis / 'windspeed'
         self.purpleair = self.root / 'purpleair'
         self.tables = self.root / 'tables'
         self.temp = self.root / 'temp'
@@ -131,3 +132,4 @@ GIS = GISSettings()
 PA = PurpleAirSettings()
 AWS = AWSSettings()
 start_log()
+YEARS = [2015, 2016, 2017, 2018, 2019, 2020, 2021]
