@@ -1,3 +1,69 @@
+# 2022-02-12
+## Tasks:
+- Select 10 EPA Sensors near LA
+- Select all PA sensors in 25 mi radius of EPA sensors
+- Save those sensors' hourly windspeed data
+- Create design value functions (annual, 24hour) given quarter
+  - should be reusable on read and imputed data
+- Create regression for each sensor
+- Predict and save predicted data for each sensor year
+- Calculate psuedo design values and counterfactual design values
+- Create attainment and counterfactual attainment indicators
+- Map attainment statuses
+- Map bias (psuedo design values - counterfactual design values)
+- Plot distribution of bias
+- Measure prediction error
+- Estimate confidence intervals
+
+## Select 10 EPA sensors near LA
+1. Finish setting up EPA AQI API
+   - iterate over all dates for a site, append dataframes together and save site file
+2. Find and print list of lat lons of sensors
+3. Find 10 sensors closest to Los Angeles-Long Beach-Anaheim centroid (Core Based Statistical Areas)
+
+
+
+
+# 2022-02-11 Meeting with Meredith
+
+Good morning! I hope your Friday is off to a good start :)
+
+The paper deadline is in one week, and presentations one week after that.
+I am still approximately 25 hours of programming away from having results.
+I seem to have two options:
+1. Submitting what I have by next Friday: I could cobble some results together on a small sample by Friday, with a fairly sparse draft.
+2. Asking for an extension: older students have encouraged me to ask for an extension of 2-3 weeks. I've talked to other students in my cohort about this and there is general support for asking for an extension, though I think I'm the only one that really needs it per se.
+
+## Todo:
+- email joe
+- start writing the paper: data section, then analysis, then conclusion, then lit review
+
+## paper:
+- sinece th 1970s we've had this network of monitors
+- literature on strategic locations
+- critical input to good air quality regualtion is good air quality measurement
+- if local regulators can control when thiese monitors are on or off we are in danger of getting biased measures of air quality
+- providing a new dataset that will provide an objective comparison to air quality monitorying (ground truth)
+- focused on "monitor shutdowns"
+- implement policy efficiently (can't )
+- local agencies have incentives (fines...) to report specific values in that 75%
+
+
+
+# 2022-02-06
+- finish handling of windspeed example
+- use or download EPA monitor data for one site
+- get a quarter's worth of 3 data sources for one EPA monitor
+- Write draft introduction
+
+Desgin values:
+- completeness based on number of complete days, and a complete day is based on number of valid hours
+  - one complete day = >= 75% of valid hours (>= 18 hours)
+  - one complete quarter = >= 75% complete days of days that should be sampled
+    - every day (Q1: 68 of 90: 22 days, Q2: 68 of 91, 23 days, Q3 & Q4: 69 of 92, 23 days)
+    - every 3 days (Q1 & Q3: 23 of 30: 7 days, Q2 & Q4: 24 of 31: 7 days)
+    - every 6 days (Q1, Q2, & Q3: 12 of 15: 3 days, Q4: 12 of 16: 4 days)
+
 # 2022-01-28 Meeting with Meredith
 ## Data
 - Purple Air

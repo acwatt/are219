@@ -6,10 +6,12 @@
 """Module to be imported for project settings and paths."""
 
 # Built-in Imports
+import time
 from pathlib import Path
 import keyring
 import logging
 import keyring.util.platform_ as keyring_platform
+import requests
 
 
 # CLASSES --------------------------
@@ -85,6 +87,43 @@ class PurpleAirSettings:
             set_password(self, attr, namespace)
 
 
+class EPASettings:
+    """Class to hold settings for Purple Air API when downloading data."""
+    def __init__(self):
+
+        namespace = "epa_api"
+        self.read_key = None  # placeholder to be filled in below
+        self.user_id = None
+
+        # Check if this computer has a valid EPA API user
+        value = keyring.get_credential(namespace, "user_id").password
+        # If not, sign up a new user
+        if value is None:
+            self.signup()
+
+        for attr in ["read_key", "user_id"]:
+            set_password(self, attr, namespace)
+
+    def signup(self):
+        """This signs up the email address to use the EPA AWI API.
+
+        A verification email will be sent to the email account specified.
+        This only needs to be done once per email, so this function should
+        only run if the email is new.
+        Currently, this function runs if the email has not been setup on this
+        computer. Which means it will reset the read_key of an already signed up
+        email address if that email address was used on another computer.
+        So if you are running this program on one computer after using it on a
+        different computer, you will probably need to delete the epa_api read_key
+        and user_id so it can be reset and reverified.
+        """
+        url = f"https://aqs.epa.gov/data/api/signup?email={self.user_id}"
+        requests.get(url)
+        print('Wait for the new signup email to arrive (this may take several minutes\n'
+              'then add the email and key to the keyring below...')
+        time.sleep(10)
+
+
 class AWSSettings:
     """Class to hold settings for Amazon AWS info."""
     def __init__(self):
@@ -125,11 +164,18 @@ def set_password(self, attr, namespace):
     setattr(self, attr, value)
 
 
+def delete_passwords(namespace, attr_list):
+    """Helper function for deleting attributes saved to keyring."""
+    for attr in attr_list:
+        keyring.delete_password(namespace, attr)
+
+
 # MAIN -------------------------------
 # Create instances of each class to be called from other
 PATHS = Paths()
 GIS = GISSettings()
 PA = PurpleAirSettings()
+EPA = EPASettings()
 AWS = AWSSettings()
 start_log()
 YEARS = [2015, 2016, 2017, 2018, 2019, 2020, 2021]
