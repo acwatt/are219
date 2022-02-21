@@ -231,13 +231,14 @@ def test():
 
     pa_complete_list = []
     # For each PA id in dataframe
-    for
+    # for pa_id in df_
         # Download all PA data and save to PA-id csv
 
         # For each quarter from this PA's min(year) to max(year)
+        # ymin, ymax = min(), max()
             # Calc quarter's hourly completeness and add to dataframe
             # Add quartly hourly completeness to list
-            pa_complete_list.append({})
+            # pa_complete_list.append({})
 
     # Save PA quarter hourly completeness (pa_epa_sensors_completeness.csv)
 
