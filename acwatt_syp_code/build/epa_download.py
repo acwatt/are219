@@ -6,6 +6,9 @@
 import json
 import pandas as pd
 from pandas.core.computation.ops import UndefinedVariableError
+import geopandas as gpd
+from shapely import wkt
+from shapely.geometry import Point
 import requests
 import matplotlib.pyplot as plt
 # Third-party Imports
@@ -130,6 +133,31 @@ def plot_hour_distributions(df, site, year):
     plt.show()
 
 
+def plot_epa_pa_sensors(df1, point, site, county):
+    p_shp = PATHS.data.gis / 'cb_2018_us_county_500k' / 'cb_2018_us_county_500k.shp'
+    gdf = gpd.read_file(p_shp).query("STATEFP == '06'")
+    ax = gdf.plot(color='grey', figsize=(8, 8))
+    df1.to_crs(gdf.crs).plot(ax=ax, color='blue')
+    # for thresh in [25, 10, 5]:
+    #     df2 = df1.to_crs(gdf.crs).query(f"dist < {thresh}")
+    #     df2.plot(ax=ax, color='green', alpha=0.1)
+    df2 = df1.to_crs(gdf.crs).query("dist < 25")
+    df2.plot(ax=ax, color='green')
+    df2b = df1.to_crs(gdf.crs).query("dist < 10")
+    df2b.plot(ax=ax, color='yellow')
+    df2c = df1.to_crs(gdf.crs).query("dist < 5")
+    df2c.plot(ax=ax, color='pink')
+    df3 = gpd.GeoDataFrame(geometry=[point], crs='EPSG:3310').to_crs(gdf.crs)
+    df3.plot(ax=ax, color='red')
+    p_fig = PATHS.output / 'figures' / f'county-{county}_site-{site}_epa-pa-concentric-ranges.png'
+    # Adjust the figure
+    width, height = 0.55, 0.51
+    plt.xlim([df3.geometry[0].x-width, df3.geometry[0].x+width])
+    plt.ylim([df3.geometry[0].y-height, df3.geometry[0].y+height])
+    plt.tight_layout()
+    plt.savefig(p_fig)
+
+
 def generate_observation_counts():
     # bdate, edate = "20160101", "20210101"
     # df_monitors = get_monitor_list_at_site(bdate=bdate, edate=edate, state="06",
@@ -179,9 +207,22 @@ def test():
     df_pa = load_pa_locations()
 
     # for each EPA monitor
-        # calulate distance of all PA monitors to EPA site location
+    # site, county, lat, lon = "4004", "037", 33.79236, -118.17533
+    mile_to_meter = 1609.34
 
+    for site, county, lat, lon in zip(df1.site_number, df1.county_code, df1.latitude, df1.longitude):
+        print('Finding nearest PA sensors for', site, county)
+        df_temp = df_pa.copy()
+        # translate lat lon to meter coordinate system
+        point = (gpd.GeoDataFrame(geometry=[Point(lon, lat)], crs=df_pa.crs)
+                 .to_crs('EPSG:3310')
+                 .geometry[0])
+        # calulate distance of all PA monitors to EPA site location
+        df_temp = df_temp.to_crs('EPSG:3310')
+        df_temp['dist'] = df_temp.geometry.distance(point) / mile_to_meter
+        plot_epa_pa_sensors(df_temp, point, site, county)
         # get PA sensors within 25 miles
+        pass
 
         # calulate non-normalized IDW weights for each PA monitor
 
