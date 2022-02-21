@@ -12,6 +12,9 @@ import matplotlib.pyplot as plt
 from ratelimiter import RateLimiter
 # Local Imports
 from ..utils.config import PATHS, EPA
+PATHS.data.epa_monitors = PATHS.data.epa / 'epa_monitors' / 'epa_monitors'
+PATHS.data.epa_pm25 = PATHS.data.epa_monitors / 'data_from_api' / '88101'
+DTYPES = {"Parameter Code": int, "State Code": str, "County Code": str, "Site Number": str}
 
 
 @RateLimiter(max_calls=1, period=6)
@@ -117,6 +120,88 @@ def generate_observation_counts():
     p = PATHS.data.epa.monitors / 'aqs_monitors_88101_hourlyobs.csv'
     pd.DataFrame(data_list).to_csv(p, index=False)
     print('done')
+
+
+def test():
+    years = ['2016', '2017', '2018', '2019', '2020', '2021']
+
+    # load list of 15 hourly CA sites (county-site pair)
+    p1 = PATHS.data.epa.monitors / 'aqs_monitors_88101_hourly-ca-monitors.csv'
+    df1 = pd.read_csv(p1, )
+
+    # For each EPA site
+    for s in df1.site_code:
+        df_list = []
+        # For each year
+        for y in years:
+            # Get site-year hourly data
+            pass
+            # Append site-year df to list
+            pass
+
+        # Concat df_list and save site-hourly file
+        df_site_hourly = pd.concat(df_list)
+        p_site_hourly = PATHS.data.epa.pm25 / f""
+        df_site_hourly.to_csv()
+
+    # Merge EPA site IDs with EPA site characteristics from small_sample
+    p2 = PATHS.data.epa.monitors / 'aqs_monitors_88101_smallsample.csv'
+    df2 = pd.read_csv(p2)
+    df1.join(df2, on=['county_code', 'site_number'], how='left')
+
+    # Load CA PA sensors with locations
+
+    # for each EPA monitor
+        # calulate distance of all PA monitors to EPA site location
+
+        # get PA sensors within 25 miles
+
+        # calulate non-normalized IDW weights for each PA monitor
+
+        # add PA IDs, weights, EPA site, county to dataframe
+    # Save dataframe to file (aqs_monitors_to_pa_sensors.csv)
+
+    pa_complete_list = []
+    # For each PA id in dataframe
+    for
+        # Download all PA data and save to PA-id csv
+
+        # For each quarter from this PA's min(year) to max(year)
+            # Calc quarter's hourly completeness and add to dataframe
+            # Add quartly hourly completeness to list
+            pa_complete_list.append({})
+
+    # Save PA quarter hourly completeness (pa_epa_sensors_completeness.csv)
+
+    # for each EPA site
+        # load list of PA sensors and weights
+        # for each quarter where more than 75% of hourly EPA obs exist
+            # Add site-quarter to
+            # Filter PA sensors for >X% completeness
+
+            # For each hour in quarter
+                # Create new weights for non-missing PA-hours (divide by sum of weights)
+
+                # Create IDW weighted EPA predicted PM2.5 from PA-hours
+
+            # Save # of total hours and # of missing EPA hours in quarter
+
+            # Create design values for non-missing EPA
+
+            # Create
+
+
+
+
+""" EPA AQS API Notes
+Request Limits and Terms of Service
+The API has the following limits imposed on request size:
+- Length of time: All services (except Monitor) must have the end date (edate field) be in the same year as the begin date (bdate field).
+- Number of parameters: Most services allow for the selection of multiple parameter codes (param field). A maximum of 5 parameter codes may be listed in a single request.
+- Limit the size of queries: Our database contains billions of values and you may request more than you intend. If you are unsure of the amount of data, start small and work your way up. We request that you limit queries to 1,000,000 rows of data each. You can use the "observation count" field on the annualData service to determine how much data exists for a time-parameter-geography combination. If you have any questions or need advice, please contact us.
+- Limit the frequency of queries: Our system can process a limited load. If scripting requests, please wait for one request to complete before submitting another and do not make more than 10 requests per minute. Also, we request a pause of 5 seconds between requests and adjust accordingly for response time and size.
+If you violate these terms, we may disable your account without notice (but we will be in contact via the email address provided).
+"""
 
 
 
