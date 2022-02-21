@@ -14,7 +14,7 @@ from ratelimiter import RateLimiter
 from ..utils.config import PATHS, EPA
 PATHS.data.epa_monitors = PATHS.data.epa / 'epa_monitors' / 'epa_monitors'
 PATHS.data.epa_pm25 = PATHS.data.epa_monitors / 'data_from_api' / '88101'
-DTYPES = {"Parameter Code": int, "State Code": str, "County Code": str, "Site Number": str}
+DTYPES = {"parameter_code": int, "state_code": str, "county_code": str, "site_number": str}
 
 
 @RateLimiter(max_calls=1, period=6)
@@ -61,10 +61,12 @@ def get_site_year(site, year, state="06", county="037"):
 
 
 def save_site(site, county, years = None):
-    p = PATHS.data.epa_pm25 / f"county_{county}_site_{site}_hourly.csv"
+    p = PATHS.data.epa_pm25 / f"county-{county}_site-{site}_hourly.csv"
     # Check if file already exists
     if p.exists():
         return False
+    else:
+        print("Downloading hourly EPA data for", site, county)
     if years is None:
         years = ['2016', '2017', '2018', '2019', '2020', '2021']
     df_list = []
@@ -75,7 +77,9 @@ def save_site(site, county, years = None):
         print(df_temp)
     # Concat df_list and save site-hourly file
     df_site_hourly = pd.concat(df_list)
-    df_site_hourly = df_site_hourly.query("sample_duration == '1 HOUR'")
+    df_site_hourly = (df_site_hourly
+                      .query("sample_duration == '1 HOUR'")
+                      .sort_values(['date_local', 'time_local']))
     df_site_hourly.to_csv(p, index=False)
     return True
 
@@ -157,11 +161,10 @@ def generate_observation_counts():
 
 
 def test():
-    years = ['2016', '2017', '2018', '2019', '2020', '2021']
-
     # load list of 15 hourly CA sites (county-site pair)
-    p1 = PATHS.data.epa.monitors / 'aqs_monitors_88101_hourly-ca-monitors.csv'
-    df1 = pd.read_csv(p1, )
+    p1 = PATHS.data.epa_monitors / 'aqs_monitors_88101_hourly-ca-monitors.csv'
+    df1 = pd.read_csv(p1, dtype=DTYPES)
+    site_counties = [pair for pair in zip(df1.site_number, df1.county_code)]
 
     # For each EPA site
     for s in df1.site_code:
@@ -179,9 +182,9 @@ def test():
         df_site_hourly.to_csv()
 
     # Merge EPA site IDs with EPA site characteristics from small_sample
-    p2 = PATHS.data.epa.monitors / 'aqs_monitors_88101_smallsample.csv'
-    df2 = pd.read_csv(p2)
-    df1.join(df2, on=['county_code', 'site_number'], how='left')
+    p2 = PATHS.data.epa_monitors / 'aqs_monitors_88101_smallsample.csv'
+    df2 = pd.read_csv(p2, dtype=DTYPES)
+    df1 = df1.merge(df2, on=['county_code', 'site_number'], how='left')
 
     # Load CA PA sensors with locations
     df_pa = load_pa_locations()
