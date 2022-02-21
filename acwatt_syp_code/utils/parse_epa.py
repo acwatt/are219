@@ -10,7 +10,18 @@ import requests
 # Third-party Imports
 from ratelimiter import RateLimiter
 # Local Imports
-from ..utils.config import PATHS
+from ..utils.config import PATHS, EPA
+
+
+def plot_ca_monitors(df):
+    from shapely.geometry import Point
+    import geopandas as gpd
+    from geopandas import GeoDataFrame
+    geometry = [Point(xy) for xy in zip(df['longitude'], df['latitude'])]
+    gdf = GeoDataFrame(df, geometry=geometry)
+    cali = gpd.read_file(PATHS.data.gis / 'cb_2018_us_county_500k').query("STATEFP == '06'")
+    gdf.plot(ax=cali.plot(figsize=(10, 6)), marker='o', color='red', markersize=15)
+    plt.show()
 
 
 def latlon_distance(x1, y1, x2, y2):
@@ -74,14 +85,15 @@ def save_pm25_locations(small_sample=False, n=50):
                     'open_date', 'last_method_begin_date']
     df.to_csv(p3, columns=cols_to_keep, index=False)
     # calculate distance to point of interest (in LA)
-    df = df.assign(distance=distance_from(center, df.Latitude, df.Longitude))
+    df = df.assign(distance=distance_from(center, df.latitude, df.longitude))
+    cols_to_keep.append("distance")
     # Pick top n closest points
     df2 = df.sort_values('distance', ascending=True).head(n)
     # Save only needed columns of small sample dataset
     df2.to_csv(p4, columns=cols_to_keep, index=False)
     fig = plt.Figure()
-    plt.scatter(df.Longitude, df.Latitude, c='grey')
-    plt.scatter(df2.Longitude, df2.Latitude, c='green')
+    plt.scatter(df.longitude, df.latitude, c='grey')
+    plt.scatter(df2.longitude, df2.latitude, c='green')
     plt.scatter(-118.17495969249252, 33.79567453746542, c='red')
     if small_sample:
         return p4  # small sample file path
