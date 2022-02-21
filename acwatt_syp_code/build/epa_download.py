@@ -88,6 +88,20 @@ def load_small_sample_ids():
     return [pair for pair in zip(sites, counties)]
 
 
+def load_pa_locations():
+    # Load county shapefile to get CRS for purpleair locations
+    p_shp = PATHS.data.gis / 'cb_2018_us_county_500k' / 'cb_2018_us_county_500k.shp'
+    gdf = gpd.read_file(p_shp)
+    p_pa = PATHS.data.temp / 'sensors_filtered.csv'
+    cols = ['sensor_index', 'date_created', 'lat', 'lon', 'STUSPS', 'geometry']
+    df = pd.read_csv(p_pa, usecols=cols)
+    df['geometry'] = df['geometry'].apply(wkt.loads)
+    gdf = gpd.GeoDataFrame(df, crs=gdf.crs)
+    gdf = gdf.rename(columns={'lat': 'latitude', 'lon': 'longitude', 'STUSPS': 'state'})
+    gdf = gdf.query("state in ['CA', 'OR', 'NV', 'AZ']")
+    return gdf
+
+
 def plot_hour_distributions(df, site, year):
     for hour in range(24):
         h = f"{hour:02d}"
@@ -170,6 +184,7 @@ def test():
     df1.join(df2, on=['county_code', 'site_number'], how='left')
 
     # Load CA PA sensors with locations
+    df_pa = load_pa_locations()
 
     # for each EPA monitor
         # calulate distance of all PA monitors to EPA site location
