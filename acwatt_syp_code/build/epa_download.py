@@ -7,10 +7,12 @@ import json
 import pandas as pd
 import requests
 # Third-party Imports
+from ratelimiter import RateLimiter
 # Local Imports
 from ..utils.config import PATHS, EPA
 
 
+@RateLimiter(max_calls=1, period=6)
 def get_monitor_list_at_site(bdate: str, edate: str, state: str, county: str, site: str):
     """Returns list of PM2.5 monitors at {site} that operated between the bdate and edate
 
@@ -28,6 +30,7 @@ def get_monitor_list_at_site(bdate: str, edate: str, state: str, county: str, si
     print()
 
 
+@RateLimiter(max_calls=1, period=6)
 def get_site_list(state: str, county: str):
     url = f"https://aqs.epa.gov/data/api/list/sitesByCounty?email={EPA.user_id}&key={EPA.read_key}&state={state}&county={county}"
     response = requests.get(url)
@@ -35,6 +38,7 @@ def get_site_list(state: str, county: str):
     print()
 
 
+@RateLimiter(max_calls=1, period=6)
 def get_site_data(bdate: str, edate: str, state: str, county: str, site: str):
     param = 88101  # parameter key for NAAQS PM2.5 sensors
     url = f"https://aqs.epa.gov/data/api/sampleData/bySite?email={EPA.user_id}&key={EPA.read_key}&param={param}&bdate={bdate}&edate={edate}&state={state}&county={county}&site={site}"
