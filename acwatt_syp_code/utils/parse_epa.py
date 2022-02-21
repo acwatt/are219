@@ -66,6 +66,14 @@ def load_monitors_from_api():
     return df2
 
 
+def plot_locations(df, df2):
+    fig = plt.Figure()
+    plt.scatter(df.longitude, df.latitude, c='grey')
+    plt.scatter(df2.longitude, df2.latitude, c='green')
+    plt.scatter(-118.17495969249252, 33.79567453746542, c='red')
+    plt.show()
+
+
 def save_pm25_locations(small_sample=False, n=50):
     # This is near a "interesting" sensor in LA, from Mu et al. (2021)
     center = {'lon': -118.17495969249252, 'lat': 33.79567453746542}
@@ -91,10 +99,7 @@ def save_pm25_locations(small_sample=False, n=50):
     df2 = df.sort_values('distance', ascending=True).head(n)
     # Save only needed columns of small sample dataset
     df2.to_csv(p4, columns=cols_to_keep, index=False)
-    fig = plt.Figure()
-    plt.scatter(df.longitude, df.latitude, c='grey')
-    plt.scatter(df2.longitude, df2.latitude, c='green')
-    plt.scatter(-118.17495969249252, 33.79567453746542, c='red')
+    # plot_locations(df, df2)
     if small_sample:
         return p4  # small sample file path
     else:
