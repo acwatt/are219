@@ -5,7 +5,7 @@
 # Built-in Imports
 import logging
 
-import pandas as pd
+import pandas
 # Third-party Imports
 # Local Imports
 import acwatt_syp_code.analyze.maps as am
@@ -17,6 +17,12 @@ from acwatt_syp_code.build.aws import lambda_services
 
 logger = logging.getLogger(__name__)
 
+# Set pandas settings
+pandas.set_option('display.width', 320)
+pandas.set_option('display.expand_frame_repr', True)
+pandas.set_option('display.max_rows', 20)
+pandas.set_option('display.min_rows', 50)
+pandas.set_option('display.max_columns', 250)
 
 
 if __name__ == "__main__":
