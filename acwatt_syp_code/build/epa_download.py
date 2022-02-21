@@ -166,20 +166,9 @@ def test():
     df1 = pd.read_csv(p1, dtype=DTYPES)
     site_counties = [pair for pair in zip(df1.site_number, df1.county_code)]
 
-    # For each EPA site
-    for s in df1.site_code:
-        df_list = []
-        # For each year
-        for y in years:
-            # Get site-year hourly data
-            pass
-            # Append site-year df to list
-            pass
-
-        # Concat df_list and save site-hourly file
-        df_site_hourly = pd.concat(df_list)
-        p_site_hourly = PATHS.data.epa.pm25 / f""
-        df_site_hourly.to_csv()
+    # For each EPA site, download hourly data and save csv if it doesn't exist
+    for site, county in site_counties:
+        save_site(site, county)
 
     # Merge EPA site IDs with EPA site characteristics from small_sample
     p2 = PATHS.data.epa_monitors / 'aqs_monitors_88101_smallsample.csv'
