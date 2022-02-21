@@ -60,6 +60,26 @@ def get_site_year(site, year, state="06", county="037"):
     return df
 
 
+def save_site(site, county, years = None):
+    p = PATHS.data.epa_pm25 / f"county_{county}_site_{site}_hourly.csv"
+    # Check if file already exists
+    if p.exists():
+        return False
+    if years is None:
+        years = ['2016', '2017', '2018', '2019', '2020', '2021']
+    df_list = []
+    # For each year, get site-year hourly data
+    for year in years:
+        df_temp = get_site_year(site, year, county=county)
+        df_list.append(df_temp)
+        print(df_temp)
+    # Concat df_list and save site-hourly file
+    df_site_hourly = pd.concat(df_list)
+    df_site_hourly = df_site_hourly.query("sample_duration == '1 HOUR'")
+    df_site_hourly.to_csv(p, index=False)
+    return True
+
+
 def load_small_sample_ids():
     p = PATHS.data.epa.monitors / 'aqs_monitors_88101_smallsample.csv'
     df = pd.read_csv(p, dtype=DTYPES)
