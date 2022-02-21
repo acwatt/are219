@@ -1,3 +1,16 @@
+# 2022-02-20
+## Tasks
+- Select hourly monitors near LA
+
+
+## What is poc?
+sorted(df.query("poc!=1").site_number.to_list())
+['0001', '0001', '0001', '0002', '0002', '0002', '0002', '0003', '0003', '0004', '0004', '0004', '0004', '0005', '0005', '0005', '0005', '0005', '0005', '0006', '0006', '0006', '0006', '0007', '0007', '0007', '0007', '0008', '0008', '0009', '0009', '0010', '0011', '0011', '0011', '0012', '0012', '0013', '0015', '0019', '0077', '1001', '1002', '1002', '1003', '1003', '1004', '1004', '1004', '1005', '1033', '2001', '2002', '2002', '2009', '2010', '2010', '2016', '3001', '5001', '5003', '8002']
+
+
+## Questions
+- Where can I find a definition of NAAQS area borders? All documentation just mentions "geographical area" and that if an area is found out of attainment, local and state governments need to provide EPA with a SIP. But the PM2.5 design value = max{design values of monitors in area}, so the definition of the area matters.
+
 # 2022-02-12
 ## Tasks:
 - Select 10 EPA Sensors near LA
