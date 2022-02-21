@@ -453,7 +453,7 @@ def save_sensor_list(geography, download_oldest_first=True):
         gdf = dl_sensor_list_in_geography(geography)
         print("# of US Purple Air sensors:", len(gdf))
         gdf = filter_data(gdf)
-        gdf.to_csv(fp)
+        gdf.to_csv(fp, index=False)
         df = pd.read_csv(fp)
         print("# of US Purple Air sensors after filtering:", len(df))
     # Sort so oldest are downloaded first
