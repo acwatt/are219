@@ -10,6 +10,9 @@ sorted(df.query("poc!=1").site_number.to_list())
 
 ## Questions
 - Where can I find a definition of NAAQS area borders? All documentation just mentions "geographical area" and that if an area is found out of attainment, local and state governments need to provide EPA with a SIP. But the PM2.5 design value = max{design values of monitors in area}, so the definition of the area matters.
+- Where can I find the PA algo translating particle size counts to PMX levels. Looking at the data, it looks strange:
+  e.g., when looking at particle counts for 120797, there are only counts for particles smaller than 1um, yet the PM10 is larger than the PM2.5.
+  Shouldn't they either be equal or the PM2.5 should be larger because it's a measure of smaller particles than PM10?
 
 # 2022-02-12
 ## Tasks:

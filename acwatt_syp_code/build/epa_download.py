@@ -261,16 +261,9 @@ def test():
     for pa_id in sensors:
         # Read PA sensor from S3
         pass
+        # Take average of channel a and b for PM1.0 (CF=1)
+        # Calculate difference between channels
 
-        # calulate non-normalized IDW weights for each PA monitor
-
-        # add PA IDs, weights, EPA site, county to dataframe
-    # Save dataframe to file (aqs_monitors_to_pa_sensors.csv)
-
-    pa_complete_list = []
-    # For each PA id in dataframe
-    # for pa_id in df_
-        # Download all PA data and save to PA-id csv
 
         # For each quarter from this PA's min(year) to max(year)
         # ymin, ymax = min(), max()
@@ -281,10 +274,14 @@ def test():
     # Save PA quarter hourly completeness (pa_epa_sensors_completeness.csv)
 
     # for each EPA site
-        # load list of PA sensors and weights
+        # load list of PA sensors and distances
+
+        # Calulate non-normalized IDW weights for each PA monitor
+        # df_temp['weight_raw'] = 1 / df_temp['dist_mile'] ** idw_power
+
         # for each quarter where more than 75% of hourly EPA obs exist
             # Add site-quarter to
-            # Filter PA sensors for >X% completeness
+            # Filter PA sensors for >X% completeness ???
 
             # For each hour in quarter
                 # Create new weights for non-missing PA-hours (divide by sum of weights)
