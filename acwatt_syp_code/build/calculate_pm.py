@@ -6,6 +6,7 @@
 import logging
 import datetime as dt
 import pandas as pd
+import numpy as np
 import os
 import io
 # Third-party Imports
@@ -44,6 +45,29 @@ def minmax(series):
     return max(series)-min(series)
 
 
+def correction_factor(pm, humidity):
+    """Return PM2.5 corrected values for matching PurpleAir to EPA 88101 monitors.
+    
+    See docs/purpleair/purpleair_specs.md for more notes.
+    humidity is percentage, so much devide by 100
+    """
+    if pm <= 343:
+        return 0.52*pm - 0.086*humidity/100 + 5.75
+    else:
+        return 0.46*pm + (3.93e-4)*(pm**2) + 2.97
+
+
+def flag_large_diff(pm_avg, pm_diff):
+    """Return 1 if diff is both >= 5ug/m^3 and >= 70% of avg, else 0"""
+    return int( (pm_diff >= 5) and (pm_diff/pm_avg >= 0.7) )
+
+
+def make_quarter(date: str):
+    year, month, day = date.split("-")
+    quarter = int(np.ceil(int(month)/3))
+    return quarter
+
+
 def transform_pa_df(df):
     # Rename 6 columns to keep
     cols = [' '.join(col).strip() for col in df.columns.values]
@@ -59,6 +83,15 @@ def transform_pa_df(df):
                                         'humidity': 'mean',
                                         'temperature': 'mean'}).reset_index()
     df2.columns = ['created_at', 'sensor_id', 'pm2.5_avg', 'pm2.5_diff', 'humidity', 'temperature']
+    # Flag readings that are too different (ref: EPA, see notes at bottom)
+    df2['large_diff'] = df2.apply(lambda row: flag_large_diff(row['pm2.5_avg'], row['pm2.5_diff']), axis=1)
+    # Create date and time columns that match EPA data
+    df2['date_local'] = df2['created_at'].str.split("T").str[0]
+    df2['time_local'] = df2['created_at'].str.split("T").str[1].str.split(":00-").str[0]
+    df_pa['year'] = df_pa['date_local'].str.split("-").str[0]
+    df_pa['quarter'] = df2.apply(lambda row: make_quarter(row['date_local']), axis=1)
+    # Add PA-EPA correction factor
+    df2['pm2.5_corrected'] = df2.apply(lambda row: correction_factor(row['pm2.5_avg'], row['humidity']), axis=1)
     return df2
     # Match times between PA and EPA?
 
@@ -70,16 +103,15 @@ lookup_dir = PATHS.data.tables / 'epa_pa_lookups'
 county, site = "037", "4004"  # start with one site
 # Load sensor list for this site
 sensor_list = pd.read_csv(lookup_dir / f'county-{county}_site-{site}_pa-list.csv')
-sensor_list = sensor_list.query(f"dist_mile < {threshold}")
+sensor_list = sensor_list.query(f"dist_mile < {threshold}").sort_values('dist_mile')
 # For each sensor in list, download CSV from S3 to get PM2.5 values
-sensor_id, dist = 489, 4.932198
-# Downlaod the file to dataframe
-bucket_file = f'{sensor_id:07d}.csv'
-df_pa = download_file(bucket, bucket_file)
-# Transform the dataframe to get PM2.5 and humidity
-df_pa = transform_pa_df(df_pa)
-# Load EPA data
-df_epa = pd.read_csv(PATHS.data.epa_pm25 / f"county-{county}_site-{site}_hourly.csv")
+for sensor_id, dist in zip(sensor_list['sensor_index'], sensor_list['dist_mile']):
+    # Downlaod the file to dataframe
+    bucket_file = f'{sensor_id:07d}.csv'
+    df_pa = download_file(bucket, bucket_file)
+    # Transform the dataframe to get PM2.5 and humidity
+    df_pa = transform_pa_df(df_pa)
+    df_pa['weight_raw'] = 1 / dist**power
 
 
 
