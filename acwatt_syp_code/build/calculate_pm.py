@@ -148,6 +148,12 @@ def average_sensors(df):
 
     Each hour is a weighted average of the PA sensors that have that hour valid.
     """
+    def weighted_avg(x):  # input is a group's dataframe
+        pm_wavg = {'pm2.5_pa': (x['weight_raw'] * x['pm2.5_corrected']).sum() / x['weight_raw'].sum()}
+        return pd.Series(pm_wavg, index=['pm2.5_pa'])
+
+    df2 = df.groupby(['date_local', 'time_local']).apply(weighted_avg).reset_index()
+    return df2
 
 
 
