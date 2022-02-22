@@ -4,6 +4,7 @@
 
 # Built-in Imports
 import json
+import logging
 import pandas as pd
 from pandas.core.computation.ops import UndefinedVariableError
 import geopandas as gpd
@@ -18,6 +19,7 @@ from ..utils.config import PATHS, EPA
 from ..build.purpleair_download import dl_sorted_sensors
 
 DTYPES = {"parameter_code": int, "state_code": str, "county_code": str, "site_number": str}
+logger = logging.getLogger(__name__)
 
 
 @RateLimiter(max_calls=1, period=6)
