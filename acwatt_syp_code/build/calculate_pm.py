@@ -118,11 +118,37 @@ def transform_pa_df(df):
     # Create date and time columns that match EPA data
     df2['date_local'] = df2['created_at'].str.split("T").str[0]
     df2['time_local'] = df2['created_at'].str.split("T").str[1].str.split(":00-").str[0]
-    df_pa['year'] = df_pa['date_local'].str.split("-").str[0]
-    df_pa['quarter'] = df2.apply(lambda row: make_quarter(row['date_local']), axis=1)
+    df2['year'] = df2['date_local'].str.split("-").str[0]
+    df2['quarter'] = df2.apply(lambda row: make_quarter(row['date_local']), axis=1)
     # Add PA-EPA correction factor
     df2['pm2.5_corrected'] = df2.apply(lambda row: correction_factor(row['pm2.5_avg'], row['humidity']), axis=1)
     return df2
+
+
+def concat_sensors(sensor_list: pd.DataFrame):
+    df_list = []
+    for sensor_id, dist in zip(sensor_list['sensor_index'], sensor_list['dist_mile']):
+        print(f'Starting sensor {sensor_id}')
+        # Downlaod the file to dataframe
+        bucket_file = f'{sensor_id:07d}.csv'
+        df_pa = download_file(bucket, bucket_file)
+        # Transform the dataframe to get PM2.5 and humidity
+        df_pa = transform_pa_df(df_pa)
+        df_pa['weight_raw'] = 1 / dist ** power
+        # make_hourly_avg_plots(df_pa, df_epa)
+        df_list.append(df_pa)
+
+    df = pd.concat(df_list, ignore_index=True).sort_values(['created_at', 'sensor_id'])
+    df = df.query('large_diff == 0')  # remove any sensor-hours that have large channel discrepancies
+    return pd.concat(df_list, ignore_index=True).sort_values(['created_at', 'sensor_id'])
+
+
+def average_sensors(df):
+    """Return df with one weighted average PM2.5 for each hour.
+
+    Each hour is a weighted average of the PA sensors that have that hour valid.
+    """
+
 
 
 threshold = 5  # miles
@@ -135,19 +161,18 @@ county, site = "037", "4004"  # start with one site
 # Load EPA data
 df_epa = pd.read_csv(PATHS.data.epa_pm25 / f"county-{county}_site-{site}_hourly.csv")
 df_epa['year'] = df_epa['date_local'].str.split("-").str[0]
+df_epa['quarter'] = df_epa.apply(lambda row: make_quarter(row['date_local']), axis=1)
 # Load sensor list for this site
 sensor_list = pd.read_csv(lookup_dir / f'county-{county}_site-{site}_pa-list.csv')
 sensor_list = sensor_list.query(f"dist_mile < {threshold}").sort_values('dist_mile')
 # For each sensor in list, download CSV from S3 to get PM2.5 values
-for sensor_id, dist in zip(sensor_list['sensor_index'], sensor_list['dist_mile']):
-    # Downlaod the file to dataframe
-    bucket_file = f'{sensor_id:07d}.csv'
-    df_pa = download_file(bucket, bucket_file)
-    # Transform the dataframe to get PM2.5 and humidity
-    df_pa = transform_pa_df(df_pa)
-    df_pa['weight_raw'] = 1 / dist**power
+df_pa = concat_sensors(sensor_list)
+# Combine PA sensors to get hourly weighted average PM2.5
+df_pa = average_sensors(df_pa)
+# Merge with EPA data
+df_epa2 = df_epa.merge(df_pa, on=['date_local', 'time_local'],
+                       suffixes=("_epa", "_pa"), how='left')
 
-    make_hourly_avg_plots(df_pa, df_epa)
 
 
 
