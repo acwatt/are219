@@ -19,7 +19,7 @@ from ..utils.config import PATHS, AWS
 logger = logging.getLogger(__name__)
 
 
-def make_hourly_avg_plots(df_pa, df_epa):
+def make_hourly_avg_plots(df_pa, df_epa, sensor_id):
     """Make a plot comparing hourly epa data to a single PA sensor's data over the year.
 
     Pick the year that the PA sensor has the most data for and the EPA
