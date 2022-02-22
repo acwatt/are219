@@ -406,18 +406,18 @@ def dl_sensor_weeks(sensor_id: Union[str, int, float],
     return df, time_taken
 
 
-def save_success(sensor_id, time_taken, write_lock):
+def save_success(sensor_id, time_taken):
     filepath = PATHS.data.purpleair / 'sensors_downloaded.csv'
     df = pd.DataFrame({'sensor_id': sensor_id, 'time_taken': time_taken},
                       index=[sensor_id])
     try:
         # If another thread is writing, we may read an empty file. Better lock it.
-        with write_lock:
+        with WRITE_LOCK:
             df_old = pd.read_csv(filepath)
         df = pd.concat([df_old, df])
     except FileNotFoundError:
         pass
-    with write_lock:
+    with WRITE_LOCK:
         df.to_csv(filepath, index=False)
 
 
@@ -434,7 +434,7 @@ def dl_sensor(sensor_id, write_lock, print_lock):
     filepath = f'{SAVE_DIR}/{sensor_id:07d}.csv'
     df.to_csv(filepath, index=False)
     # Sensor done, write success to file
-    save_success(sensor_id, time_taken, write_lock)
+    save_success(sensor_id, time_taken)
 
 
 def dl_sensors(sensor_list, write_lock, print_lock, i: int = None):
