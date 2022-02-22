@@ -8,6 +8,7 @@ import datetime as dt
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import os
 import io
 # Third-party Imports
@@ -233,11 +234,13 @@ county, site = "037", "4004"  # start with one site
 # Load EPA data
 df_epa = load_epa(county, site)
 
-# Calculate hourly weighted average PurpleAir PM2.5 for this site
-df_epa = add_pa_pm(df_epa, county, site)
-
-
-
+        # Calculate hourly weighted average PurpleAir PM2.5 for this site
+        df_epa = add_pa_pm(df_epa, county, site)
+        if df_epa is False:
+            continue
+        save_combined_file(df_epa, county, site)
+    plot_epa_vs_pa(df_epa, county, site, color_category='year')
+    plot_epa_missing_vs_pa(df_epa, county, site)
 
 
 """NOTES:
