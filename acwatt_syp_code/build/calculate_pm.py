@@ -56,6 +56,7 @@ def plot_epa_vs_pa(df_epa, county, site, color_category = 'hour of day'):
     else:
         df_epa[color_category] = df_epa[color_category].astype(int)
         color_map = 'Set1'
+    plt.figure()
     ax = df_epa.plot.scatter(x='pm2.5_pa', y='pm2.5_epa', c=color_category, colormap=color_map,
                              xlabel='PurpleAir Inv Dist Weighted Avg PM2.5',
                              ylabel='EPA PM2.5',
@@ -66,10 +67,12 @@ def plot_epa_vs_pa(df_epa, county, site, color_category = 'hour of day'):
     plt.tight_layout()
     p = PATHS.output / 'figures' / 'epa_vs_pa' / f'site-{county}-{site}_epa-pa-hourly-plot.png'
     plt.savefig(p, dpi=200)
+    plt.close()
 
 
 def plot_epa_missing_vs_pa(df_epa, county, site, bins=10):
     df_epa['EPA missing'] = df_epa['pm2.5_epa'].isna()
+    plt.figure()
     sns.set(rc={'figure.figsize': (10, 8)})
     ax = sns.regplot(x='pm2.5_pa', y='EPA missing', data=df_epa, logistic=True)
     ax.set_xlabel('PurpleAir Inv Dist Weighted Avg PM2.5', fontsize=20)
@@ -78,6 +81,21 @@ def plot_epa_missing_vs_pa(df_epa, county, site, bins=10):
     plt.tight_layout()
     p = PATHS.output / 'figures' / 'epa_vs_pa' / f'site-{county}-{site}_epa-pa-missing-plot.png'
     plt.savefig(p, dpi=200)
+    plt.close()
+
+
+def hist_epa_missing_vs_pa(df_epa, county, site):
+    df_epa['EPA missing'] = df_epa['pm2.5_epa'].isna()
+    df = df_epa.query("`EPA missing` and `pm2.5_pa` < 40")
+    plt.figure(figsize=(10, 8))
+    ax = df['pm2.5_pa'].plot.density()
+    ax.set_xlabel('PurpleAir Inv Dist Weighted Avg PM2.5', fontsize=20)
+    ax.set_ylabel('EPA Missing Density', fontsize=20)
+    ax.set_title(f"EPA missing hours' density on PurpleAir IDW PM2.5 for site {county}-{site}")
+    plt.tight_layout()
+    p = PATHS.output / 'figures' / 'epa_vs_pa' / f'site-{county}-{site}_epa-pa-missing-density.png'
+    plt.savefig(p, dpi=200)
+    plt.close()
 
 
 def load_epa(county: str, site: str):
@@ -258,6 +276,7 @@ for county, site in aqs_tbl:  # cs_list
         save_combined_file(df_epa, county, site)
     plot_epa_vs_pa(df_epa, county, site, color_category='year')
     plot_epa_missing_vs_pa(df_epa, county, site)
+    hist_epa_missing_vs_pa(df_epa, county, site)
 
 
 """NOTES:
