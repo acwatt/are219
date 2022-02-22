@@ -20,18 +20,27 @@ logger = logging.getLogger(__name__)
 
 
 def make_hourly_avg_plots(df_pa, df_epa):
+    """Make a plot comparing hourly epa data to a single PA sensor's data over the year.
+
+    Pick the year that the PA sensor has the most data for and the EPA
+    """
     year = df_pa.groupby('year').count().sort_values('pm2.5_corrected').head(1).reset_index()['year'][0]
+    if year == "2022":
+        year = "2021"
     q1 = f"date_local >= '{year}-01-01' and date_local <= '{year}-12-31'"
+    # Plot EPA data
     ax = (df_epa
           .query(q1)
           .groupby('time_local').mean().reset_index()
           .plot(x='time_local', y='sample_measurement',
                 label='EPA PM2.5',
                 title=f"PM2.5 EPA-PA comparison for sensor {sensor_id} in {year}"))
+    # Plot uncorrected PA data for this sensor
     (df_pa
      .query(q1)
      .groupby('time_local').mean().reset_index()
      .plot(x='time_local', y='pm2.5_avg', ax=ax, label='PA PM2.5 Raw'))
+    # Plot corrected EPA data for this sensor
     (df_pa
      .query(q1)
      .groupby('time_local').mean().reset_index()
