@@ -117,6 +117,23 @@ for sensor_id, dist in zip(sensor_list['sensor_index'], sensor_list['dist_mile']
     df_pa = transform_pa_df(df_pa)
     df_pa['weight_raw'] = 1 / dist**power
 
+    print(df_pa.groupby('year').count().sort_values('pm2.5_corrected'))
+    year = df_pa.groupby('year').count().sort_values('pm2.5_corrected').head(1).reset_index()['year'][0]
+    q1 = f"date_local >= '{year}-01-01' and date_local <= '{year}-12-31'"
+    ax = (df_epa
+          .query(q1)
+          .groupby('time_local').mean().reset_index()
+          .plot(x='time_local', y='sample_measurement',
+                label='EPA PM2.5',
+                title=f"PM2.5 EPA-PA comparison for sensor {sensor_id} in {year}"))
+    (df_pa
+     .query(q1)
+     .groupby('time_local').mean().reset_index()
+     .plot(x='time_local', y='pm2.5_avg', ax=ax, label='PA PM2.5 Raw'))
+    (df_pa
+     .query(q1)
+     .groupby('time_local').mean().reset_index()
+     .plot(x='time_local', y='pm2.5_corrected', ax=ax, label='PA PM2.5 Corrected'))
 
 
 
