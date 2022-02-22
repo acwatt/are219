@@ -30,7 +30,7 @@ if __name__ == "__main__":
     small_sample = True
     epa_monitorlist_path = save_pm25_locations(small_sample)
     epa_download.test()
-    # purpleair_download.dl_us_sensors()
+    purpleair_download.dl_us_sensors()
     # purpleair_download.test_lambda()
     # lambda_services.save_pa_data_to_s3()
     logger.info('DONE')

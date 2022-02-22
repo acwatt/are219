@@ -557,6 +557,30 @@ def dl_us_sensors():
     df = read_success()
 
 
+def dl_sorted_sensors(sensors: pd.Series):
+    df = save_sensor_list('US', download_oldest_first=True)
+    make_data_dir()
+
+    df2 = pd.DataFrame({'sensor_index': sensors})
+    df2 = df2.merge(df, on='sensor_index', how='left').drop_duplicates('sensor_index')
+    print(len(sensors), len(df2))
+
+    num_threads = 2
+    logger.info(f'Downloading sensors with {num_threads} threads')
+    start = time.perf_counter()
+
+    # Use function to save sensors to S3
+    save_sensors_to_s3(df2, max_threads=num_threads, time_between_lambdas=10)
+
+    t = round((time.perf_counter() - start)/60, 2)
+    print(f'TOTAL TIME: {t} minutes')
+    num_sensors = len(df2)
+    print(f'AVERAGE TIME for {num_threads} threads: {t/num_sensors}')
+    # Read successful download/uploads and return
+    df = read_success()
+    print('DONE')
+
+
 def update_loc_lookup(df, output=False):
     """Update the location lookup table for sensor id's; return lookup if output=True."""
     loc_cols = ['id', 'lat', 'lon', 'date']
