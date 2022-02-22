@@ -142,15 +142,15 @@ def plot_epa_pa_sensors(df1, point, site, county):
     # for thresh in [25, 10, 5]:
     #     df2 = df1.to_crs(gdf.crs).query(f"dist < {thresh}")
     #     df2.plot(ax=ax, color='green', alpha=0.1)
-    df2 = df1.to_crs(gdf.crs).query("dist < 25")
+    df2 = df1.to_crs(gdf.crs).query("dist_mile < 25")
     df2.plot(ax=ax, color='green')
-    df2b = df1.to_crs(gdf.crs).query("dist < 10")
+    df2b = df1.to_crs(gdf.crs).query("dist_mile < 10")
     df2b.plot(ax=ax, color='yellow')
-    df2c = df1.to_crs(gdf.crs).query("dist < 5")
+    df2c = df1.to_crs(gdf.crs).query("dist_mile < 5")
     df2c.plot(ax=ax, color='pink')
     df3 = gpd.GeoDataFrame(geometry=[point], crs='EPSG:3310').to_crs(gdf.crs)
     df3.plot(ax=ax, color='red')
-    p_fig = PATHS.output / 'figures' / f'county-{county}_site-{site}_epa-pa-concentric-ranges.png'
+    p_fig = PATHS.output / 'figures' / 'concentric_ranges' / f'county-{county}_site-{site}_epa-pa-concentric-ranges.png'
     # Adjust the figure
     width, height = 0.55, 0.51
     plt.xlim([df3.geometry[0].x-width, df3.geometry[0].x+width])
