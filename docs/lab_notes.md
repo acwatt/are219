@@ -2,6 +2,11 @@
 ## Tasks
 - Select hourly monitors near LA
 
+## Data mangling steps:
+- Exclude PA sensor-hours that have a large discrepancy between sensor channels (>= 5 ug AND >= 70% of avg)
+- Weighted avg of PA readings for each hour: weighted avg of valid PA sensors for that hour, IDW, sum of weights to 1
+- 
+
 
 ## What is poc?
 sorted(df.query("poc!=1").site_number.to_list())
