@@ -136,4 +136,9 @@ for sensor_id, dist in zip(sensor_list['sensor_index'], sensor_list['dist_mile']
      .plot(x='time_local', y='pm2.5_corrected', ax=ax, label='PA PM2.5 Corrected'))
 
 
+"""NOTES:
+Steps for PA correction to match EPA monitors from:
+https://cfpub.epa.gov/si/si_public_file_download.cfm?p_download_id=540979&Lab=CEMM
 
+Updated correction equation from EPA presentation. See docs/purpleair/purpleair_specs.md 
+"""
