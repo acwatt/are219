@@ -83,6 +83,7 @@ def load_epa(county: str, site: str):
     df_epa = pd.read_csv(PATHS.data.epa_pm25 / f"county-{county}_site-{site}_hourly.csv")
     df_epa['year'] = df_epa['date_local'].str.split("-").str[0]
     df_epa['quarter'] = df_epa.apply(lambda row: make_quarter(row['date_local']), axis=1)
+    df_epa = df_epa.rename(columns={'sample_measurement': 'pm2.5_epa'})
     return df_epa
 
 
@@ -183,7 +184,7 @@ def concat_sensors(sensor_list: pd.DataFrame):
         # Transform the dataframe to get PM2.5 and humidity
         df_pa = transform_pa_df(df_pa)
         df_pa['weight_raw'] = 1 / dist ** power
-        # make_hourly_avg_plots(df_pa, df_epa)
+        # make_hourly_avg_plots(df_pa, df_epa, sensor_id)
         df_list.append(df_pa)
 
     if not df_list:
