@@ -141,7 +141,7 @@ def dl_sensor_week(sensor_info: dict, date_start: dt.datetime, params: dict,
                     break
                 except ConnectionError or requests.exceptions.HTTPError:
                     print(f'ts_request failed. Trying again. Previous errors = {errors}')
-                    time.sleep(0.1)
+                    time.sleep(0.2)
                     errors += 1
             if errors == 5:
                 print(f'Reached maximum tries for channel {channel}, type {type_}, date {date_start} - {date_end}.')
@@ -288,4 +288,5 @@ def thread_test(p, lambda_context):
     return {'successful': successful,
             'sensor_id': sensor_id,
             'ip': ip}
+
 
