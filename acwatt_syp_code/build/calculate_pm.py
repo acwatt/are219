@@ -48,11 +48,49 @@ def make_hourly_avg_plots(df_pa, df_epa, sensor_id):
     plt.show()
 
 
+def plot_epa_vs_pa(df_epa, county, site, color_category = 'hour of day'):
+    if color_category == 'hour of day':
+        df_epa[color_category] = df_epa['time_local'].str.split(':').str[0].astype(int)
+        color_map = 'twilight_shifted'
+    else:
+        df_epa[color_category] = df_epa[color_category].astype(int)
+        color_map = 'Set1'
+    ax = df_epa.plot.scatter(x='pm2.5_pa', y='pm2.5_epa', c=color_category, colormap=color_map,
+                             xlabel='PurpleAir Inv Dist Weighted Avg PM2.5',
+                             ylabel='EPA PM2.5',
+                             title=f"EPA vs PurpleAir IDW Avg PM2.5 for site {county}-{site}",
+                             figsize=(10, 8), s=12, alpha=0.8)
+    max_pm = df_epa['pm2.5_epa'].max()
+    ax.plot([0, max_pm], [0, max_pm], color='red')
+    plt.tight_layout()
+    p = PATHS.output / 'figures' / 'epa_vs_pa' / f'site-{county}-{site}_epa-pa-hourly-plot.png'
+    plt.savefig(p, dpi=200)
+
+
+def plot_epa_missing_vs_pa(df_epa, county, site, bins=10):
+    df_epa['EPA missing'] = df_epa['pm2.5_epa'].isna()
+    sns.set(rc={'figure.figsize': (10, 8)})
+    ax = sns.regplot(x='pm2.5_pa', y='EPA missing', data=df_epa, logistic=True)
+    ax.set_xlabel('PurpleAir Inv Dist Weighted Avg PM2.5', fontsize=20)
+    ax.set_ylabel('EPA PM2.5 is Missing', fontsize=20)
+    ax.set_title(f"EPA missing hour vs PurpleAir IDW PM2.5 for site {county}-{site}")
+    plt.tight_layout()
+    p = PATHS.output / 'figures' / 'epa_vs_pa' / f'site-{county}-{site}_epa-pa-missing-plot.png'
+    plt.savefig(p, dpi=200)
+
+
 def load_epa(county: str, site: str):
     df_epa = pd.read_csv(PATHS.data.epa_pm25 / f"county-{county}_site-{site}_hourly.csv")
     df_epa['year'] = df_epa['date_local'].str.split("-").str[0]
     df_epa['quarter'] = df_epa.apply(lambda row: make_quarter(row['date_local']), axis=1)
     return df_epa
+
+
+def save_combined_file(df_epa, county, site):
+    keep = ['state_code', 'county_code', 'site_number', 'year', 'quarter', 'date_local', 'time_local', 'pm2.5_epa', 'pm2.5_pa', 'sample_duration', 'qualifier']
+    df_epa2 = df_epa[keep]
+    p = PATHS.data.root / 'combined_epa_pa' / f"county-{county}_site-{site}_combined-epa-pa.csv"
+    df_epa2.to_csv(p, index=False)
 
 
 def download_file(bucket_name, bucket_filepath):
