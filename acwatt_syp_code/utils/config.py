@@ -45,6 +45,8 @@ class Data:
         self.checkpoints = self.root / 'checkpoints'
         self.configs = self.root / 'configs'
         self.epa = self.root / 'epa'
+        self.epa_monitors = self.epa / 'epa_monitors' / 'epa_monitors'
+        self.epa_pm25 = self.epa_monitors / 'data_from_api' / '88101'
         self.gis = self.root / 'gis'
         self.gis_county = self.gis / 'cb_2018_us_county_500k' / 'cb_2018_us_county_500k.shp'
         self.gis_state = self.gis / 'cb_2018_us_state_5m' / 'cb_2018_us_state_5m.shp'
