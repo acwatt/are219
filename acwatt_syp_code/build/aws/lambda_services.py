@@ -15,7 +15,7 @@ import io
 import json
 import logging
 import os
-import random
+import pandas as pd
 import requests
 import time
 import zipfile
@@ -343,6 +343,7 @@ def create_function(lambda_function_name, aws_objects, concurrency=200):
 @RateLimiter(max_calls=1, period=0.2)
 def run_function(lambda_function_name, aws_objects, lambda_params):
     # Run the function!
+    time1 = dt.datetime.now()
     with PRINT_LOCK:
         print(f"Starting {lambda_params['sensor_id'] :07d} download")
     with LAMBDA_LOCK:
@@ -354,6 +355,8 @@ def run_function(lambda_function_name, aws_objects, lambda_params):
     successful = result['successful']
     with PRINT_LOCK:
         print(f"Downloading and saving of sensor {sensor_id} resulted in these weeks being downloaded:\n {successful}")
+    time_taken = dt.datetime.now() - time1
+    save_success(sensor_id, time_taken)
     return result
 
 
@@ -411,6 +414,21 @@ def teardown_aws_objects(aws_objects, function_list):
                 print(f"{function} already deleted.")
             else:
                 raise
+
+
+def save_success(sensor_id, time_taken):
+    filepath = PATHS.data.purpleair / 'sensors_downloaded.csv'
+    df = pd.DataFrame({'sensor_id': sensor_id, 'time_taken': time_taken},
+                      index=[sensor_id])
+    try:
+        # If another thread is writing, we may read an empty file. Better lock it.
+        with WRITE_LOCK:
+            df_old = pd.read_csv(filepath)
+        df = pd.concat([df_old, df])
+    except FileNotFoundError:
+        pass
+    with WRITE_LOCK:
+        df.to_csv(filepath, index=False)
 
 
 def start_function(sensor_tuple, aws_objects):

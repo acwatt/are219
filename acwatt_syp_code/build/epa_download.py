@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 from ratelimiter import RateLimiter
 # Local Imports
 from ..utils.config import PATHS, EPA
+from ..build.purpleair_download import dl_sorted_sensors
 PATHS.data.epa_monitors = PATHS.data.epa / 'epa_monitors' / 'epa_monitors'
 PATHS.data.epa_pm25 = PATHS.data.epa_monitors / 'data_from_api' / '88101'
 DTYPES = {"parameter_code": int, "state_code": str, "county_code": str, "site_number": str}
