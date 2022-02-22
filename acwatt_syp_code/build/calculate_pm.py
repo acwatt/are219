@@ -229,10 +229,27 @@ bucket = 'purpleair-data'
 power = 1  # IDW power
 lookup_dir = PATHS.data.tables / 'epa_pa_lookups'
 
+# cs_list = [("037", "4004"), ("031", "1004"), ("057", "0005")]
+dtypes = {"county": str, "site": str}
+aqs_tbl = (pd.read_csv(lookup_dir / 'aqs_monitors_to_pa_sensors.csv', dtype=dtypes))
+aqs_tbl['download_order'] = aqs_tbl['county'] + '-' + aqs_tbl['site']
+aqs_tbl = aqs_tbl.replace({'download_order': {"037-4004": "000-0001",
+                                              "031-1004": "000-0002",
+                                              "057-0005": "000-0003"}})
+aqs_tbl = (aqs_tbl
+           .sort_values('download_order')[['county', 'site']]
+           .drop_duplicates()
+           .values.tolist())
 # For each EPA site-county in list
-county, site = "037", "4004"  # start with one site
-# Load EPA data
-df_epa = load_epa(county, site)
+county, site = "037", "4004"
+for county, site in aqs_tbl:  # cs_list
+    p = PATHS.data.root / 'combined_epa_pa' / f"county-{county}_site-{site}_combined-epa-pa.csv"
+    if p.exists():
+        df_epa = pd.read_csv(p)
+    else:
+        print(f'Starting site {county}-{site}')
+        # Load EPA data
+        df_epa = load_epa(county, site)
 
         # Calculate hourly weighted average PurpleAir PM2.5 for this site
         df_epa = add_pa_pm(df_epa, county, site)
