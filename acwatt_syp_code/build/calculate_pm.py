@@ -48,6 +48,13 @@ def make_hourly_avg_plots(df_pa, df_epa):
     plt.show()
 
 
+def load_epa(county: str, site: str):
+    df_epa = pd.read_csv(PATHS.data.epa_pm25 / f"county-{county}_site-{site}_hourly.csv")
+    df_epa['year'] = df_epa['date_local'].str.split("-").str[0]
+    df_epa['quarter'] = df_epa.apply(lambda row: make_quarter(row['date_local']), axis=1)
+    return df_epa
+
+
 def download_file(bucket_name, bucket_filepath):
     """Return a pandas dataframe of a CSV from an S3 bucket
 
@@ -156,6 +163,19 @@ def average_sensors(df):
     return df2
 
 
+def add_pa_pm(df_epa, county, site):
+    # Load sensor list for this site
+    sensor_list = pd.read_csv(lookup_dir / f'county-{county}_site-{site}_pa-list.csv')
+    sensor_list = sensor_list.query(f"dist_mile < {threshold}").sort_values('dist_mile')
+    # For each sensor in list, download CSV from S3 to get PM2.5 values
+    df_pa = concat_sensors(sensor_list)
+    # Combine PA sensors to get hourly weighted average PM2.5
+    df_pa2 = average_sensors(df_pa)
+    # Merge with EPA data
+    df_epa2 = df_epa.merge(df_pa2, on=['date_local', 'time_local'],
+                           suffixes=("_epa", "_pa"), how='left')
+    return df_epa2
+
 
 threshold = 5  # miles
 bucket = 'purpleair-data'
@@ -165,19 +185,11 @@ lookup_dir = PATHS.data.tables / 'epa_pa_lookups'
 # For each EPA site-county in list
 county, site = "037", "4004"  # start with one site
 # Load EPA data
-df_epa = pd.read_csv(PATHS.data.epa_pm25 / f"county-{county}_site-{site}_hourly.csv")
-df_epa['year'] = df_epa['date_local'].str.split("-").str[0]
-df_epa['quarter'] = df_epa.apply(lambda row: make_quarter(row['date_local']), axis=1)
-# Load sensor list for this site
-sensor_list = pd.read_csv(lookup_dir / f'county-{county}_site-{site}_pa-list.csv')
-sensor_list = sensor_list.query(f"dist_mile < {threshold}").sort_values('dist_mile')
-# For each sensor in list, download CSV from S3 to get PM2.5 values
-df_pa = concat_sensors(sensor_list)
-# Combine PA sensors to get hourly weighted average PM2.5
-df_pa = average_sensors(df_pa)
-# Merge with EPA data
-df_epa2 = df_epa.merge(df_pa, on=['date_local', 'time_local'],
-                       suffixes=("_epa", "_pa"), how='left')
+df_epa = load_epa(county, site)
+
+# Calculate hourly weighted average PurpleAir PM2.5 for this site
+df_epa = add_pa_pm(df_epa, county, site)
+
 
 
 
