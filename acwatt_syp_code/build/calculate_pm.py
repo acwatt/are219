@@ -7,6 +7,7 @@ import logging
 import datetime as dt
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 import os
 import io
 # Third-party Imports
@@ -16,6 +17,26 @@ from botocore.exceptions import ClientError
 from ..utils.config import PATHS, AWS
 
 logger = logging.getLogger(__name__)
+
+
+def make_hourly_avg_plots(df_pa, df_epa):
+    year = df_pa.groupby('year').count().sort_values('pm2.5_corrected').head(1).reset_index()['year'][0]
+    q1 = f"date_local >= '{year}-01-01' and date_local <= '{year}-12-31'"
+    ax = (df_epa
+          .query(q1)
+          .groupby('time_local').mean().reset_index()
+          .plot(x='time_local', y='sample_measurement',
+                label='EPA PM2.5',
+                title=f"PM2.5 EPA-PA comparison for sensor {sensor_id} in {year}"))
+    (df_pa
+     .query(q1)
+     .groupby('time_local').mean().reset_index()
+     .plot(x='time_local', y='pm2.5_avg', ax=ax, label='PA PM2.5 Raw'))
+    (df_pa
+     .query(q1)
+     .groupby('time_local').mean().reset_index()
+     .plot(x='time_local', y='pm2.5_corrected', ax=ax, label='PA PM2.5 Corrected'))
+    plt.show()
 
 
 def download_file(bucket_name, bucket_filepath):
@@ -98,9 +119,9 @@ def transform_pa_df(df):
 threshold = 5  # miles
 bucket = 'purpleair-data'
 power = 1  # IDW power
+lookup_dir = PATHS.data.tables / 'epa_pa_lookups'
 
 # For each EPA site-county in list
-lookup_dir = PATHS.data.tables / 'epa_pa_lookups'
 county, site = "037", "4004"  # start with one site
 # Load EPA data
 df_epa = pd.read_csv(PATHS.data.epa_pm25 / f"county-{county}_site-{site}_hourly.csv")
@@ -117,23 +138,8 @@ for sensor_id, dist in zip(sensor_list['sensor_index'], sensor_list['dist_mile']
     df_pa = transform_pa_df(df_pa)
     df_pa['weight_raw'] = 1 / dist**power
 
-    print(df_pa.groupby('year').count().sort_values('pm2.5_corrected'))
-    year = df_pa.groupby('year').count().sort_values('pm2.5_corrected').head(1).reset_index()['year'][0]
-    q1 = f"date_local >= '{year}-01-01' and date_local <= '{year}-12-31'"
-    ax = (df_epa
-          .query(q1)
-          .groupby('time_local').mean().reset_index()
-          .plot(x='time_local', y='sample_measurement',
-                label='EPA PM2.5',
-                title=f"PM2.5 EPA-PA comparison for sensor {sensor_id} in {year}"))
-    (df_pa
-     .query(q1)
-     .groupby('time_local').mean().reset_index()
-     .plot(x='time_local', y='pm2.5_avg', ax=ax, label='PA PM2.5 Raw'))
-    (df_pa
-     .query(q1)
-     .groupby('time_local').mean().reset_index()
-     .plot(x='time_local', y='pm2.5_corrected', ax=ax, label='PA PM2.5 Corrected'))
+    make_hourly_avg_plots(df_pa, df_epa)
+
 
 
 """NOTES:
