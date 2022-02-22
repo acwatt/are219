@@ -208,21 +208,58 @@ def test():
     df_pa = load_pa_locations()
 
     # for each EPA monitor
-    # site, county, lat, lon = "4004", "037", 33.79236, -118.17533
     mile_to_meter = 1609.34
+    threshold = 5  # miles
+    min_pa_sensors = 5
+    idw_power = 1
 
+    df_list = []
     for site, county, lat, lon in zip(df1.site_number, df1.county_code, df1.latitude, df1.longitude):
         print('Finding nearest PA sensors for', site, county)
-        df_temp = df_pa.copy()
+        df_temp = df_pa.copy().to_crs('EPSG:3310')
         # translate lat lon to meter coordinate system
         point = (gpd.GeoDataFrame(geometry=[Point(lon, lat)], crs=df_pa.crs)
                  .to_crs('EPSG:3310')
                  .geometry[0])
         # calulate distance of all PA monitors to EPA site location
-        df_temp = df_temp.to_crs('EPSG:3310')
-        df_temp['dist'] = df_temp.geometry.distance(point) / mile_to_meter
-        plot_epa_pa_sensors(df_temp, point, site, county)
-        # get PA sensors within 25 miles
+        df_temp['dist_mile'] = df_temp.geometry.distance(point) / mile_to_meter
+        # plot_epa_pa_sensors(df_temp, point, site, county)
+        # get PA sensors within threshold miles or closest 3
+        if len(df_temp.query(f'dist_mile < 50')) > min_pa_sensors:
+            df_temp = df_temp.query(f'dist_mile < 50')
+        else:
+            df_temp = df_temp.sort_values('dist_mile').head(min_pa_sensors)
+
+        p_temp = PATHS.data.tables / 'epa_pa_lookups' / f'county-{county}_site-{site}_pa-list.csv'
+        cols = ['sensor_index', 'dist_mile']
+        df_temp.to_csv(p_temp, columns=cols, index=False)
+        # Save dataframe of all PAsensor-EPAmonitor-distance pairs
+        df_temp['site'] = site
+        df_temp['county'] = county
+        df_temp['dist_order'] = df_temp['dist_mile'].rank(method='max')
+        df_list.append(df_temp[['site', 'county', 'sensor_index', 'dist_mile', 'dist_order']])
+    # Save dataframe of PA-EPA distances
+    df_all = pd.concat(df_list, ignore_index=True)
+    df_all.to_csv(PATHS.data.tables / 'epa_pa_lookups' / f'aqs_monitors_to_pa_sensors.csv', index=False)
+
+    # Create download order
+    df_all['download_order'] = df_all['county'] + '-' + df_all['site']
+    df_all = df_all.replace({'download_order': {"037-4004": "000-0001",
+                                                "031-1004": "000-0002",
+                                                "057-0005": "000-0003"}})
+
+    # For all PA within threshold distance of an EPA monitor
+    to_download = (df_all
+                   .query(f"dist_mile < {threshold} or dist_order <= {min_pa_sensors}")
+                   .sort_values('download_order'))
+    sensors = to_download.sensor_index.unique()
+
+    # Download PA data
+    dl_sorted_sensors(sensors)
+
+    # For each PA id, calculate completeness
+    for pa_id in sensors:
+        # Read PA sensor from S3
         pass
 
         # calulate non-normalized IDW weights for each PA monitor
