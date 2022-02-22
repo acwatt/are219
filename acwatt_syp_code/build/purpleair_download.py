@@ -463,12 +463,13 @@ def save_sensor_list(geography, download_oldest_first=True):
     return df
 
 
-def save_sensors_to_s3(sensor_df, max_threads: int = 10, time_between_lambdas: float = 1.0):
+def save_sensors_to_s3(sensor_df, max_threads: int = 2, time_between_lambdas: float = 1.0):
     """Create and use a lambda function to save Purple Air data to S3 bucket.
 
     @param sensor_df: pandas dataframe of Purple Air sensors to download data for.
     @param max_threads: max # of lambda function uses to run at the same time.
                         # between 1 and 1000
+    @param time_between_lambdas: time to sleep between launching lambda functions
     """
     # Setup AWS objects
     lambda_function_filename = 'lambda_download_script.py'
@@ -498,12 +499,12 @@ def save_sensors_to_s3(sensor_df, max_threads: int = 10, time_between_lambdas: f
 
 
 def process_sensors(df, function_name, aws_objects,
-                    max_threads: int = 10, time_between_lambdas: float = 1.0):
+                    max_threads: int = 2, time_between_lambdas: float = 1.0):
     pool = ThreadPool(processes=max_threads)
     results = []
     lambda_params = {'bucket_name': AWS.bucket_name,
                      'PA_api_key': PA.read_key,
-                     'max_threads': 1,
+                     'max_threads': 2,
                      'time_between_processes': 2.5}
     logger.info(f"Processing {len(df)} sensors.")
     for sensor_id in df.sensor_index:
@@ -541,13 +542,13 @@ def dl_us_sensors():
     # print('last_modified:', dt.datetime.utcfromtimestamp(last_modified))
     # dl_sensors([77527], WRITE_LOCK, PRINT_LOCK)
 
-    num_threads = 1
+    num_threads = 2
     logger.info(f'Downloading sensors with {num_threads} threads')
     start = time.perf_counter()
 
     # Use function to save sensors to S3
     # process_sensors(df, max_threads=num_threads)
-    save_sensors_to_s3(df, max_threads=num_threads, time_between_lambdas=1.0)
+    save_sensors_to_s3(df, max_threads=num_threads, time_between_lambdas=10)
 
     t = round((time.perf_counter() - start)/60, 2)
     print(f'TOTAL TIME: {t} minutes')
