@@ -112,6 +112,7 @@ def download_file(bucket_name, bucket_filepath):
         # response = s3_client.get_object(Bucket=bucket, Key=bucket_file)
         # response = s3_client.upload_file(file_path, bucket, object_name)
     except ClientError as e:
+        print(f'Unable to retrieve S3 object {bucket_filepath}')
         logging.error(e)
         return False
 
@@ -177,12 +178,16 @@ def concat_sensors(sensor_list: pd.DataFrame):
         # Downlaod the file to dataframe
         bucket_file = f'{sensor_id:07d}.csv'
         df_pa = download_file(bucket, bucket_file)
+        if df_pa is False:
+            continue  # Skip this sensor if there is no file in the S3 for it
         # Transform the dataframe to get PM2.5 and humidity
         df_pa = transform_pa_df(df_pa)
         df_pa['weight_raw'] = 1 / dist ** power
         # make_hourly_avg_plots(df_pa, df_epa)
         df_list.append(df_pa)
 
+    if not df_list:
+        return False
     df = pd.concat(df_list, ignore_index=True).sort_values(['created_at', 'sensor_id'])
     df = df.query('large_diff == 0')  # remove any sensor-hours that have large channel discrepancies
     return pd.concat(df_list, ignore_index=True).sort_values(['created_at', 'sensor_id'])
@@ -207,6 +212,8 @@ def add_pa_pm(df_epa, county, site):
     sensor_list = sensor_list.query(f"dist_mile < {threshold}").sort_values('dist_mile')
     # For each sensor in list, download CSV from S3 to get PM2.5 values
     df_pa = concat_sensors(sensor_list)
+    if df_pa is False:
+        return False
     # Combine PA sensors to get hourly weighted average PM2.5
     df_pa2 = average_sensors(df_pa)
     # Merge with EPA data
