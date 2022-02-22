@@ -93,14 +93,18 @@ def transform_pa_df(df):
     # Add PA-EPA correction factor
     df2['pm2.5_corrected'] = df2.apply(lambda row: correction_factor(row['pm2.5_avg'], row['humidity']), axis=1)
     return df2
-    # Match times between PA and EPA?
+
 
 threshold = 5  # miles
 bucket = 'purpleair-data'
+power = 1  # IDW power
 
 # For each EPA site-county in list
 lookup_dir = PATHS.data.tables / 'epa_pa_lookups'
 county, site = "037", "4004"  # start with one site
+# Load EPA data
+df_epa = pd.read_csv(PATHS.data.epa_pm25 / f"county-{county}_site-{site}_hourly.csv")
+df_epa['year'] = df_epa['date_local'].str.split("-").str[0]
 # Load sensor list for this site
 sensor_list = pd.read_csv(lookup_dir / f'county-{county}_site-{site}_pa-list.csv')
 sensor_list = sensor_list.query(f"dist_mile < {threshold}").sort_values('dist_mile')
