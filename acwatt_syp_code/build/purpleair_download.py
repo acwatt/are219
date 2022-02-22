@@ -531,8 +531,8 @@ def test_lambda():
 def dl_us_sensors():
     df = save_sensor_list('US', download_oldest_first=True)
     num_sensors = 1
-    make_data_dir()
     df = df.head(n=num_sensors)
+    make_data_dir()
 
     d = pa_request_single_sensor(162)['sensor']
     print('Sensor info dict:\n', d)
