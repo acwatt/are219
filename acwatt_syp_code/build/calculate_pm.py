@@ -84,7 +84,7 @@ def plot_epa_missing_vs_pa(df_epa, county, site, bins=10):
     plt.close()
 
 
-def hist_epa_missing_vs_pa(df_epa, county, site):
+def density_epa_missing_vs_pa(df_epa, county, site):
     df_epa['EPA missing'] = df_epa['pm2.5_epa'].isna()
     df = df_epa.query("`EPA missing` and `pm2.5_pa` < 40")
     plt.figure(figsize=(10, 8))
@@ -276,7 +276,10 @@ for county, site in aqs_tbl:  # cs_list
         save_combined_file(df_epa, county, site)
     plot_epa_vs_pa(df_epa, county, site, color_category='year')
     plot_epa_missing_vs_pa(df_epa, county, site)
-    hist_epa_missing_vs_pa(df_epa, county, site)
+    try:
+        density_epa_missing_vs_pa(df_epa, county, site)
+    except ValueError:
+        print('No PurpleAir data overlaps with missing EPA data.')
 
 
 """NOTES:
