@@ -56,7 +56,7 @@ def plot_epa_vs_pa(df_epa, county, site, color_category = 'hour of day'):
     else:
         df_epa[color_category] = df_epa[color_category].astype(int)
         color_map = 'Set1'
-    plt.figure()
+    fig = plt.figure()
     ax = df_epa.plot.scatter(x='pm2.5_pa', y='pm2.5_epa', c=color_category, colormap=color_map,
                              xlabel='PurpleAir Inv Dist Weighted Avg PM2.5',
                              ylabel='EPA PM2.5',
@@ -67,12 +67,12 @@ def plot_epa_vs_pa(df_epa, county, site, color_category = 'hour of day'):
     plt.tight_layout()
     p = PATHS.output / 'figures' / 'epa_vs_pa' / f'site-{county}-{site}_epa-pa-hourly-plot.png'
     plt.savefig(p, dpi=200)
-    plt.close()
+    plt.close(fig)
 
 
 def plot_epa_missing_vs_pa(df_epa, county, site, bins=10):
     df_epa['EPA missing'] = df_epa['pm2.5_epa'].isna()
-    plt.figure()
+    fig = plt.figure()
     sns.set(rc={'figure.figsize': (10, 8)})
     ax = sns.regplot(x='pm2.5_pa', y='EPA missing', data=df_epa, logistic=True)
     ax.set_xlabel('PurpleAir Inv Dist Weighted Avg PM2.5', fontsize=20)
@@ -81,7 +81,7 @@ def plot_epa_missing_vs_pa(df_epa, county, site, bins=10):
     plt.tight_layout()
     p = PATHS.output / 'figures' / 'epa_vs_pa' / f'site-{county}-{site}_epa-pa-missing-plot.png'
     plt.savefig(p, dpi=200)
-    plt.close()
+    plt.close(fig)
 
 
 def density_epa_missing_vs_pa(df_epa, county, site):
@@ -89,7 +89,7 @@ def density_epa_missing_vs_pa(df_epa, county, site):
     df_epa['EPA missing'] = df_epa['pm2.5_epa'].isna()
     df_mis = df_epa.query("`EPA missing` and `pm2.5_pa` < 50")
     df_nomis = df_epa.query("not `EPA missing` and `pm2.5_pa` < 50")
-    plt.figure(figsize=(7, 4))
+    fig = plt.figure(figsize=(7, 4))
     ax = df_mis['pm2.5_pa'].plot.density(label='Missing EPA Hours')
     df_nomis['pm2.5_pa'].plot.density(ax=ax, label='Nonmissing EPA Hours')
     ax.set_xlabel('PurpleAir Inv Dist Weighted Avg PM2.5', fontsize=fontsize_)
@@ -100,14 +100,14 @@ def density_epa_missing_vs_pa(df_epa, county, site):
     plt.tight_layout()
     p = PATHS.output / 'figures' / 'epa_vs_pa' / f'site-{county}-{site}_epa-pa-missing-density.png'
     plt.savefig(p, dpi=200)
-    plt.close()
+    plt.close(fig)
 
 
 def plot_pa_coverage(df_epa, county, site):
     fontsize_ = 15
     df_epa['PA not missing'] = df_epa['pm2.5_pa'].isna().apply(lambda x: not x)
     daily = df_epa.groupby('date_local').sum().reset_index()
-    plt.figure(figsize=(4, 4))
+    fig = plt.figure(figsize=(4, 4))
     ax = daily.plot(y='PA not missing', x='date_local')
     ax.set_xlabel('Date of PM2.5 measurement', fontsize=fontsize_)
     ax.set_ylabel('# of hours in the day with PurpleAir Coverage', fontsize=fontsize_)
@@ -117,7 +117,7 @@ def plot_pa_coverage(df_epa, county, site):
     plt.tight_layout()
     p = PATHS.output / 'figures' / 'epa_vs_pa' / f'site-{county}-{site}_pa-daily-covereage.png'
     plt.savefig(p, dpi=200)
-    plt.close()
+    plt.close(fig)
 
 
 def site_plots(county, site):
