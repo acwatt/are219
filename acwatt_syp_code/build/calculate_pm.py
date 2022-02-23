@@ -86,16 +86,21 @@ def plot_epa_missing_vs_pa(df_epa, county, site, bins=10):
 
 def density_epa_missing_vs_pa(df_epa, county, site):
     fontsize_ = 12
+    max_percentile_to_plot = 98
     df_epa['EPA missing'] = df_epa['pm2.5_epa'].isna()
-    df_mis = df_epa.query("`EPA missing` and `pm2.5_pa` < 50")
-    df_nomis = df_epa.query("not `EPA missing` and `pm2.5_pa` < 50")
+    # df_mis = df_epa.query("`EPA missing` and `pm2.5_pa` < 50")
+    # df_nomis = df_epa.query("not `EPA missing` and `pm2.5_pa` < 50")
+    df_mis = df_epa.query("`EPA missing`")
+    df_nomis = df_epa.query("not `EPA missing`")
     fig = plt.figure(figsize=(7, 4))
-    ax = df_mis['pm2.5_pa'].plot.density(label='Missing EPA Hours')
-    df_nomis['pm2.5_pa'].plot.density(ax=ax, label='Nonmissing EPA Hours')
+    ax = df_mis['pm2.5_pa'].plot.density(label='Missing')
+    df_nomis['pm2.5_pa'].plot.density(ax=ax, label='Reported')
     ax.set_xlabel('PurpleAir Inv Dist Weighted Avg PM2.5', fontsize=fontsize_)
     ax.set_ylabel('Hour Observation Density', fontsize=fontsize_)
-    ax.set_title(f"EPA missing and non-missing hours' density on PurpleAir IDW PM2.5 for site {county}-{site}         ", fontsize=fontsize_-1)
-    ax.set_xlim([0, 50])
+    ax.set_title(f"Kernal Density of PurpleAir PM2.5 for Hours where\nNAAQS Monitor Measurements are Reported vs Missing (site {county}-{site})         ", fontsize=fontsize_-1)
+    max_ = np.nanpercentile(df_epa['pm2.5_pa'], max_percentile_to_plot)
+    min_ = -1*max_/8
+    ax.set_xlim([min_, max_])
     plt.legend(fontsize=fontsize_)
     plt.tight_layout()
     p = PATHS.output / 'figures' / 'epa_vs_pa' / f'site-{county}-{site}_epa-pa-missing-density.png'
