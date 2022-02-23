@@ -190,7 +190,7 @@ def generate_observation_counts():
     print('done')
 
 
-def test():
+def download_15_test_sites():
     # load list of 15 hourly CA sites (county-site pair)
     p1 = PATHS.data.epa_monitors / 'aqs_monitors_88101_hourly-ca-monitors.csv'
     df1 = pd.read_csv(p1, dtype=DTYPES)
@@ -242,6 +242,10 @@ def test():
     # Save dataframe of PA-EPA distances
     df_all = pd.concat(df_list, ignore_index=True)
     df_all.to_csv(PATHS.data.tables / 'epa_pa_lookups' / f'aqs_monitors_to_pa_sensors.csv', index=False)
+
+    # For live loading the data during debugging (603 sensors to download as of 2022-02-22)
+    # dtypes = {"county": str, "site": str}
+    # df_all = pd.read_csv(PATHS.data.tables / 'epa_pa_lookups' / f'aqs_monitors_to_pa_sensors.csv', dtype=dtypes)
 
     # Create download order
     df_all['download_order'] = df_all['county'] + '-' + df_all['site']
