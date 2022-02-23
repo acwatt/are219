@@ -120,6 +120,18 @@ def plot_pa_coverage(df_epa, county, site):
     plt.close()
 
 
+def site_plots(county, site):
+    p = PATHS.data.root / 'combined_epa_pa' / f"county-{county}_site-{site}_combined-epa-pa.csv"
+    df_epa = pd.read_csv(p)
+    plot_epa_vs_pa(df_epa, county, site, color_category='year')
+    plot_epa_missing_vs_pa(df_epa, county, site)
+    try:
+        density_epa_missing_vs_pa(df_epa, county, site)
+    except ValueError:
+        print('No PurpleAir data overlaps with missing EPA data.')
+    plot_pa_coverage(df_epa, county, site)
+
+
 def load_epa(county: str, site: str):
     df_epa = pd.read_csv(PATHS.data.epa_pm25 / f"county-{county}_site-{site}_hourly.csv")
     df_epa['year'] = df_epa['date_local'].str.split("-").str[0]
@@ -213,13 +225,13 @@ def transform_pa_df(df):
     return df2
 
 
-def concat_sensors(sensor_list: pd.DataFrame):
+def concat_sensors(sensor_list: pd.DataFrame, power=1):  # IDW power
     df_list = []
     for sensor_id, dist in zip(sensor_list['sensor_index'], sensor_list['dist_mile']):
         print(f'Starting sensor {sensor_id}')
         # Downlaod the file to dataframe
         bucket_file = f'{sensor_id:07d}.csv'
-        df_pa = download_file(bucket, bucket_file)
+        df_pa = download_file(AWS.bucket_name, bucket_file)
         if df_pa is False:
             continue  # Skip this sensor if there is no file in the S3 for it
         # Transform the dataframe to get PM2.5 and humidity
@@ -248,7 +260,8 @@ def average_sensors(df):
     return df2
 
 
-def add_pa_pm(df_epa, county, site):
+def add_pa_pm(df_epa, county, site, threshold=5, power=1):
+    lookup_dir = PATHS.data.tables / 'epa_pa_lookups'
     # Load sensor list for this site
     sensor_list = pd.read_csv(lookup_dir / f'county-{county}_site-{site}_pa-list.csv')
     sensor_list = sensor_list.query(f"dist_mile < {threshold}").sort_values('dist_mile')
@@ -264,45 +277,55 @@ def add_pa_pm(df_epa, county, site):
     return df_epa2
 
 
-threshold = 5  # miles
-bucket = 'purpleair-data'
-power = 1  # IDW power
-lookup_dir = PATHS.data.tables / 'epa_pa_lookups'
+def load_15_sites():
+    lookup_dir = PATHS.data.tables / 'epa_pa_lookups'
+    dtypes = {"county": str, "site": str}
+    aqs_tbl = (pd.read_csv(lookup_dir / 'aqs_monitors_to_pa_sensors.csv', dtype=dtypes))
+    aqs_tbl['download_order'] = aqs_tbl['county'] + '-' + aqs_tbl['site']
+    aqs_tbl = aqs_tbl.replace({'download_order': {"037-4004": "000-0001",
+                                                  "031-1004": "000-0002",
+                                                  "057-0005": "000-0003"}})
+    aqs_tbl = (aqs_tbl
+               .sort_values('download_order')[['county', 'site']]
+               .drop_duplicates()
+               .values.tolist())
+    return aqs_tbl
 
-# cs_list = [("037", "4004"), ("031", "1004"), ("057", "0005")]
-dtypes = {"county": str, "site": str}
-aqs_tbl = (pd.read_csv(lookup_dir / 'aqs_monitors_to_pa_sensors.csv', dtype=dtypes))
-aqs_tbl['download_order'] = aqs_tbl['county'] + '-' + aqs_tbl['site']
-aqs_tbl = aqs_tbl.replace({'download_order': {"037-4004": "000-0001",
-                                              "031-1004": "000-0002",
-                                              "057-0005": "000-0003"}})
-aqs_tbl = (aqs_tbl
-           .sort_values('download_order')[['county', 'site']]
-           .drop_duplicates()
-           .values.tolist())
-# For each EPA site-county in list
-county, site = "037", "4004"
-for county, site in aqs_tbl:  # cs_list
-    p = PATHS.data.root / 'combined_epa_pa' / f"county-{county}_site-{site}_combined-epa-pa.csv"
-    if p.exists():
-        df_epa = pd.read_csv(p)
-    else:
-        print(f'Starting site {county}-{site}')
-        # Load EPA data
-        df_epa = load_epa(county, site)
 
-        # Calculate hourly weighted average PurpleAir PM2.5 for this site
-        df_epa = add_pa_pm(df_epa, county, site)
-        if df_epa is False:
+def test_15_sites(run_all=False):
+    threshold = 5  # miles
+    idw_power = 1  # Inv Distance Weighting Denominator Exponent
+    aqs_tbl = load_15_sites()
+    # For each EPA site-county in list
+    for county, site in aqs_tbl:  # cs_list
+        p = PATHS.data.root / 'combined_epa_pa' / f"county-{county}_site-{site}_combined-epa-pa.csv"
+        if p.exists() and not run_all:
+            df_epa = pd.read_csv(p)
+        else:
+            print(f'Starting site {county}-{site}')
+            # Load EPA data
+            df_epa = load_epa(county, site)
+
+            # Calculate hourly weighted average PurpleAir PM2.5 for this site
+            df_epa = add_pa_pm(df_epa, county, site, threshold=threshold, power=idw_power)
+            if df_epa is False:
+                continue
+            save_combined_file(df_epa, county, site)
+
+
+def make_plots_15_sites():
+    aqs_tbl = load_15_sites()
+    # For each EPA site-county in list
+    for county, site in aqs_tbl:  # cs_list
+        print(f'Starting plots for {county}-{site}.')
+        p = PATHS.data.root / 'combined_epa_pa' / f"county-{county}_site-{site}_combined-epa-pa.csv"
+        if p.exists():
+            df_epa = pd.read_csv(p)
+        else:
+            print(f'No Data for {county}-{site}. Continuting onto next site.')
             continue
-        save_combined_file(df_epa, county, site)
-    plot_epa_vs_pa(df_epa, county, site, color_category='year')
-    plot_epa_missing_vs_pa(df_epa, county, site)
-    try:
-        density_epa_missing_vs_pa(df_epa, county, site)
-    except ValueError:
-        print('No PurpleAir data overlaps with missing EPA data.')
-    plot_pa_coverage(df_epa, county, site)
+        site_plots(county, site)
+
 
 
 """NOTES:
