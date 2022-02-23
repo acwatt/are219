@@ -104,16 +104,17 @@ def density_epa_missing_vs_pa(df_epa, county, site):
 
 
 def plot_pa_coverage(df_epa, county, site):
-    fontsize_ = 15
+    fontsize_ = 12
     df_epa['PA not missing'] = df_epa['pm2.5_pa'].isna().apply(lambda x: not x)
     daily = df_epa.groupby('date_local').sum().reset_index()
-    fig = plt.figure(figsize=(4, 4))
-    ax = daily.plot(y='PA not missing', x='date_local')
+    daily['date'] = pd.to_datetime(daily['date_local'])
+    fig = plt.figure(figsize=(5, 5))
+    ax = daily.plot.scatter(y='PA not missing', x='date', s=10)
     ax.set_xlabel('Date of PM2.5 measurement', fontsize=fontsize_)
     ax.set_ylabel('# of hours in the day with PurpleAir Coverage', fontsize=fontsize_)
     ax.set_title(f"Hours per day with PurpleAir Coverage for site {county}-{site}", fontsize=fontsize_-1)
-    # ax.set_xlim(['2016-01-01', '2021-12-31'])
-    ax.get_legend().remove()
+    ax.set_xlim([dt.datetime.strptime('2016', '%Y'), dt.datetime.strptime('2022', '%Y')])
+    # ax.get_legend().remove()
     plt.tight_layout()
     p = PATHS.output / 'figures' / 'epa_vs_pa' / f'site-{county}-{site}_pa-daily-covereage.png'
     plt.savefig(p, dpi=200)
@@ -122,9 +123,13 @@ def plot_pa_coverage(df_epa, county, site):
 
 def site_plots(county, site):
     p = PATHS.data.root / 'combined_epa_pa' / f"county-{county}_site-{site}_combined-epa-pa.csv"
-    df_epa = pd.read_csv(p)
+    try:
+        df_epa = pd.read_csv(p)
+    except FileNotFoundError:
+        print(f'No file {p.name}. Skipping plots for site {county}-{site}')
+        return
     plot_epa_vs_pa(df_epa, county, site, color_category='year')
-    plot_epa_missing_vs_pa(df_epa, county, site)
+    # plot_epa_missing_vs_pa(df_epa, county, site)
     try:
         density_epa_missing_vs_pa(df_epa, county, site)
     except ValueError:
@@ -318,12 +323,6 @@ def make_plots_15_sites():
     # For each EPA site-county in list
     for county, site in aqs_tbl:  # cs_list
         print(f'Starting plots for {county}-{site}.')
-        p = PATHS.data.root / 'combined_epa_pa' / f"county-{county}_site-{site}_combined-epa-pa.csv"
-        if p.exists():
-            df_epa = pd.read_csv(p)
-        else:
-            print(f'No Data for {county}-{site}. Continuting onto next site.')
-            continue
         site_plots(county, site)
 
 

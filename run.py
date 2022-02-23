@@ -34,6 +34,6 @@ if __name__ == "__main__":
     # purpleair_download.dl_us_sensors()
     # purpleair_download.test_lambda()
     # lambda_services.save_pa_data_to_s3()
-    calculate_pm.test_15_sites(run_all=False)
+    # calculate_pm.test_15_sites(run_all=False)
     calculate_pm.make_plots_15_sites()
     logger.info('DONE')
