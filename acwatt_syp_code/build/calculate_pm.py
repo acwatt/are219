@@ -103,6 +103,23 @@ def density_epa_missing_vs_pa(df_epa, county, site):
     plt.close()
 
 
+def plot_pa_coverage(df_epa, county, site):
+    fontsize_ = 15
+    df_epa['PA not missing'] = df_epa['pm2.5_pa'].isna().apply(lambda x: not x)
+    daily = df_epa.groupby('date_local').sum().reset_index()
+    plt.figure(figsize=(4, 4))
+    ax = daily.plot(y='PA not missing', x='date_local')
+    ax.set_xlabel('Date of PM2.5 measurement', fontsize=fontsize_)
+    ax.set_ylabel('# of hours in the day with PurpleAir Coverage', fontsize=fontsize_)
+    ax.set_title(f"Hours per day with PurpleAir Coverage for site {county}-{site}", fontsize=fontsize_-1)
+    # ax.set_xlim(['2016-01-01', '2021-12-31'])
+    ax.get_legend().remove()
+    plt.tight_layout()
+    p = PATHS.output / 'figures' / 'epa_vs_pa' / f'site-{county}-{site}_pa-daily-covereage.png'
+    plt.savefig(p, dpi=200)
+    plt.close()
+
+
 def load_epa(county: str, site: str):
     df_epa = pd.read_csv(PATHS.data.epa_pm25 / f"county-{county}_site-{site}_hourly.csv")
     df_epa['year'] = df_epa['date_local'].str.split("-").str[0]
@@ -285,6 +302,7 @@ for county, site in aqs_tbl:  # cs_list
         density_epa_missing_vs_pa(df_epa, county, site)
     except ValueError:
         print('No PurpleAir data overlaps with missing EPA data.')
+    plot_pa_coverage(df_epa, county, site)
 
 
 """NOTES:
