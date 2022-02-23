@@ -331,6 +331,100 @@ def make_plots_15_sites():
         site_plots(county, site)
 
 
+################################################################################
+#                       LaTeX Helper functions
+################################################################################
+def generate_latex_appendix_code(width="0.8"):
+    dir1 = PATHS.output / 'figures' / 'concentric_ranges'
+    dir2 = PATHS.output / 'figures' / 'epa_vs_pa'
+    list1 = list(dir1.glob(f'*_epa-pa-concentric-ranges.png'))  # county-{c}_site-{s}
+    list2 = list(dir2.glob(f'*_pa-daily-covereage.png'))  # site-{c}-{s}
+    list3 = list(dir2.glob(f'*_epa-pa-hourly-plot.png'))  # site-{c}-{s}
+    list4 = list(dir2.glob(f'*_epa-pa-missing-density.png'))  # site-{c}-{s}
+    listlist = [list1, list2, list3, list4]
+    prefix = 'appendix/site_plots/'
+    s = ""
+    section_names = ['Concentric Radii Maps',
+                     'PurpleAir Hourly Observation Coverage',
+                     'PurpleAir EPA Non-missing Comparison',
+                     'Kernal Density Comparison']
+    functionlist = [concentric_str, coverage_str, pa_epa_comparison_str, missing_density_str]
+    for section, list_, func in zip(section_names, listlist, functionlist):
+        s += "\n\n"
+        s += section_str(section)
+        for file in list_:
+            name = file.name
+            f = prefix + name
+            county, site = get_c_s(name)
+            if f"{county}-{site}" == "037-4004":  # skip this site, used as main example
+                continue
+            s += func(f, county, site, width=width)
+            s += "\n\n"
+
+    print(s)
+
+
+def get_c_s(name):
+    if "concentric" in name:
+        county = name.split('county-')[1].split('_site')[0]
+        site = name.split('site-')[1].split('_epa')[0]
+    else:
+        county, site = name.split('site-')[1].split('_')[0].split('-')
+    return county, site
+
+
+def section_str(section):
+    return f"""
+%=========================================
+%  {section}
+%=========================================
+"""
+
+
+def concentric_str(filepath, county, site, width='0.4'):
+    return f"""
+\\begin{{figure}}
+\\centering
+\\includegraphics[width={width}\\textwidth]{{{filepath}}}
+\\caption{{Map of EPA NAAQS-primary monitoring station (red) surrounded by PurpleAir monitors within 5-mile (pink), 10-mile (yellow), and 25-mile (green) radii.This preliminary analysis uses the PurpleAir sensors within 5 miles (pink markers). This monitor is at site {site} in county {county} (FIPS code).}}
+\\label{{fig:concentric_purpleair_{county}-{site}}}
+\\end{{figure}}
+"""
+
+
+def coverage_str(filepath, county, site, width='0.4'):
+    return f"""
+\\begin{{figure}}
+\\centering
+\\includegraphics[width={width}\\textwidth]{{{filepath}}}
+\\caption{{Scatter plot indicating the number of hours in each day that this NAAQS monitor has PurpleAir coverage. An hour has PurpleAir coverage if there are any PurpleAir sensor readings within the 5-mile radius of the monitor site for that hour. The weighted average is calculated for that hour using all the available PurpleAir readings within 5 miles. This monitor is at site {site} in county {county} (FIPS code).}}
+\\label{{fig:hourly_coverage_{county}-{site}}}
+\\end{{figure}}
+"""
+
+
+def pa_epa_comparison_str(filepath, county, site, width='0.4'):
+    return f"""
+\\begin{{figure}}
+\\centering
+\\includegraphics[width={width}\\textwidth]{{{filepath}}}
+\\caption{{Scatter plot comparing reported hourly PM2.5 measurements: the x-axis represents the IDW-weighted average of PurpleAir measurements, the y-axis represents reported NAAQS-primary monitor measurements. The red line is a 45$^\circ$ line, representing perfect correlation between the PurpleAir average and the NAAQS-primary monitor. This monitor is at site {site} in county {county} (FIPS code).}}
+\\label{{fig:pa-epa-compare_{county}-{site}}}
+\\end{{figure}}
+"""
+
+
+def missing_density_str(filepath, county, site, width='0.4'):
+    return f"""
+\\begin{{figure}}
+\\centering
+\\includegraphics[width={width}\\textwidth]{{{filepath}}}
+\\caption{{Comparison of PM2.5 concentration densities for two sets of hours: reported (blue) and missing (red) hourly observations of the NAAQS monitor. Both densities use the hourly PurpleAir PM2.5 concentration estimates for this site, calculated using the IDW average of PurpleAir sensors within 5 miles of the NAAQS monitor location. This monitor is at site {site} in county {county} (FIPS code).}}
+\\label{{fig:missing-density_{county}-{site}}}
+\\end{{figure}}
+"""
+
+
 
 """NOTES:
 Steps for PA correction to match EPA monitors from:
