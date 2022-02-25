@@ -1,3 +1,62 @@
+# 2022-02-24
+## Tables
+Many tables (NAAQS levels, qualifier codes, etc) found here
+https://www.epa.gov/aqs/aqs-code-list
+
+
+
+## Summary stats
+### Counties in CA
+- any AQS monitor
+- any PurpleAir sensor
+- NAAQS primary monitor
+- PM2.5 NAAQS primary monitor
+- Hourly PM2.5 NAAQS primary monitor
+- Hourly PM2.5 NAAQS primary monitor w/ PurpleAir w/in 5 miles
+
+### Monitors in CA
+- all
+- NAAQS primary
+- PM2.5 NAAQS primary
+- Hourly PM2.5 NAAQS primary
+- Hourly PM2.5 NAAQS primary w/ PurpleAir w/in 5 miles
+- # of unique PA sensors used in sample
+- # of PA sensors used per quarter
+- # of hours in sample (by monitor) (this would be the total # of possible hours)
+- # of hours missing in sample
+- Avg # of valid hours per PA sensor for a monitor
+- min, max # of valid hours per PA sensor for a monitor
+- # of hours dropped from sample due to exceptional event
+- # of PAsensor-hours dropped due to large diff in channels
+
+Of sample (mean, sd, min, max)
+- # of quarters in sample (limited by PurpleAir availability)
+- # of days in sample
+- # of valid NAAQS days
+- # of valid PurpleAir days
+- # of PA sensors use each day in entire sample
+
+### PurpleAir in CA
+- All
+- w/i 25 miles of NAAQS monitors*
+- w/i 10 miles of NAAQS monitors*
+- w/i 5 miles of NAAQS monitors
+- w/i 5 miles of NAAQS monitors
+- # of hours droped due to large diff in channels
+*NAAQS monitors in sample
+
+### Years
+2016  2017  2018  2019  2020  2021  
+- Valid NAAQS monitors (14 all years)
+- Valid PA sensors
+- Avg PA sensors per monitor [min, max]
+- 
+
+
+
+
+
+
 # 2022-02-20
 ## Tasks
 - Select hourly monitors near LA
