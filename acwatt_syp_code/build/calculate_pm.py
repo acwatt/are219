@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import statsmodels.api as sm
 import os
 import io
 # Third-party Imports
@@ -18,7 +19,7 @@ from botocore.exceptions import ClientError
 from ..utils.config import PATHS, AWS
 
 logger = logging.getLogger(__name__)
-
+DTYPES = {"county": str, "site": str, "Qualifier Type Code": str}
 
 def make_hourly_avg_plots(df_pa, df_epa, sensor_id):
     """Make a plot comparing hourly epa data to a single PA sensor's data over the year.
@@ -302,6 +303,17 @@ def load_15_sites():
     return aqs_tbl
 
 
+def load_combined(site_dict):
+    county, site = site_dict['county'], site_dict['site']
+    p = PATHS.data.root / 'combined_epa_pa' / f"county-{county}_site-{site}_combined-epa-pa.csv"
+    return pd.read_csv(p, dtype=DTYPES)
+
+
+def load_qualifiers():
+    p = PATHS.data.tables / 'aqs_qualifiers.csv'
+    return pd.read_csv(p, converters={'Qualifier Type Code' : str})[['Qualifier Code', 'Qualifier Type Code']]
+
+
 def test_15_sites(run_all=False):
     threshold = 5  # miles
     idw_power = 1  # Inv Distance Weighting Denominator Exponent
@@ -315,7 +327,6 @@ def test_15_sites(run_all=False):
             print(f'Starting site {county}-{site}')
             # Load EPA data
             df_epa = load_epa(county, site)
-
             # Calculate hourly weighted average PurpleAir PM2.5 for this site
             df_epa = add_pa_pm(df_epa, county, site, threshold=threshold, power=idw_power)
             if df_epa is False:
@@ -329,6 +340,211 @@ def make_plots_15_sites():
     for county, site in aqs_tbl:  # cs_list
         print(f'Starting plots for {county}-{site}.')
         site_plots(county, site)
+
+
+def add_exceptional_indicator(df):
+    df_l = df.copy(deep=True)
+    df_r = load_qualifiers()
+    df_l['Qualifier Code'] = df_l.qualifier.str.split(' ', expand=True)[0]
+    df_l = df_l.merge(df_r, on='Qualifier Code', how='left')
+    exception_list = ['NULL', 'NULL QC', 'REQEXC']
+    df['drop_qualifier'] = df_l['Qualifier Type Code'].isin(exception_list)
+    return df
+
+
+def valid_daily(x: pd.Series):
+    """NAAQS design value daily average validity criterion."""
+    return x.count() >= 0.75*24
+
+
+def valid_quarter(df: pd.DataFrame):
+    """NAAQS design value quarterly validity criterion, to be used with groupby.apply()
+
+    Input must have multi index of year, quarter, and should be a "valid" column
+    with boolean values.
+    """
+    result = {f"{col.split('_')[0]}_valid_quarter": df[col].sum() >= df['min_days'].mean() for col in df.columns if 'valid_daily' in col}
+    return pd.Series(result)
+
+
+def add_quarterly_valid_indicators(df: pd.DataFrame):
+    """Return quarterly validation indicators from daily dataframe.
+
+    From EPA compleness criteria: every quarter must have 75% complete, but they
+    give the # of minimum days for each quarter as {1: 68, 2: 68, 3: 69, 4: 69}.
+    """
+    df1 = df.copy(deep=True)
+    valid_days_lookup = {1: 68, 2: 68, 3: 69, 4: 69}
+    df1['min_days'] = df.quarter.map(valid_days_lookup)
+    quarterly = df1.groupby(['year', 'quarter'], as_index=False).apply(valid_quarter)
+    return df.merge(quarterly, on=['year', 'quarter'], how='left')
+
+
+def daily_data(df: pd.DataFrame):
+    """Return Daily aggregated data (means) and validity indicators for PM2.5 columns.
+
+    For any column that has "pm2.5" in it's name, calculate the daily mean and
+    count of observations that are non-missing. Create an indicator for >=
+    than 75% non-missing hours (18 hours), is in NAAQS design value
+     determination.
+    """
+    agg_dict = {col: ['mean', 'count', valid_daily] for col in df.columns if 'pm2.5' in col}
+    agg_dict.update({'quarter': 'mean', 'year': 'mean'})
+    df_daily = df.groupby('date_local').agg(agg_dict)
+    df_daily.columns = ['_'.join(col).strip() for col in df_daily.columns.values]
+    df_daily = df_daily.rename(columns={'quarter_mean': 'quarter', 'year_mean': 'year',
+                                        'pm2.5_epa_mean': 'pm2.5_epa_daily',
+                                        'pm2.5_epa_count': 'epa_hourcount',
+                                        'pm2.5_epa_valid_daily': 'epa_valid_daily',
+                                        'pm2.5_pa_mean': 'pm2.5_pa_daily',
+                                        'pm2.5_pa_count': 'pa_hourcount',
+                                        'pm2.5_pa_valid_daily': 'pa_valid_daily'})
+    df_daily = df_daily.astype({'quarter': int, 'year': int}).reset_index()
+    # Add indicators if quarter is valid
+    df_daily = add_quarterly_valid_indicators(df_daily)
+    return df_daily
+
+
+def quarter_list(df: pd.DataFrame):
+    df1 = df.copy(deep=True)
+    dates = df1.date_local.str.split('-', expand=True)
+    df1['month'], df1['day'] = dates[1], dates[2]
+    # Take unique values of year-quarter and sort
+    quarters = sorted(df1.year_quarter.unique())
+    # Iterate down the list, starting with the 12th quarter, giving lists of 12 quarters
+    lists = []
+    for i in range(len(quarters)-12):
+        lists.append(quarters[i:(i+12)])
+    return lists
+
+
+def valid_annual(x: pd.Series):
+    """NAAQS design value annual average validity criterion."""
+    return x.count() >= 0.75*24
+
+
+def dv_annual(x: pd.Series):  # groupby.agg
+    return x.mean()
+
+
+def percentile98_lookup(N: int):
+    """Return n, for the n'th maximum number to pick to represent the 98th percentile.
+
+    For consisitency in calculating the 98th percentile, the EPA uses a lookup
+    table to pick the n'th largest observation from the list. This depends on the
+    size of the valid sample: Annual number of credible daily samples N.
+    Given N, return n so we can pick the n'th max value from the daily samples.
+    """
+    p98 = lambda x: int(np.ceil(x/50))
+    if 0 < N <= 366:
+        return p98(N) - 1  # minus 1 because python is indexed from 0
+    else:
+        print(f'Invalid input into percentile_lookup: {N}, must be integer between 1 and 366')
+        raise
+
+
+def dv_hour(x: pd.Series):
+    nth_max_index = percentile98_lookup(x.count())
+    return x.sort_values(ascending=False).iloc[nth_max_index]
+
+
+def invalid_dv(df_daily, pm_type):
+    """Return true if all quarters are valid for this PM source, else False.
+
+    The input should be a filtered df_daily, restricted to three years, since
+    the completeness criteria need to be evaluated over the 3-year range of the
+    design value.
+    """
+    return False in df_daily[f"{pm_type}_valid_quarter"].unique()
+
+
+def calculate_design_values(df_daily: pd.DataFrame, quarters: list, pm_type: str):
+    """Return dataframe of design values for each valid quarter ending a 12-quarter period.
+
+    pm_type: string of the PM2.5 source to calculate the design values for.
+        currently from list of 'epa' and 'pa'
+    """
+    # Check if DVs are valid based on all-quarters-valid criteria
+    invalid = invalid_dv(df_daily, pm_type)
+    print('Invalid?', invalid)
+    if invalid:
+        return pd.DataFrame({'annual': -9999, 'hour': -9999,
+                             'pm_type': pm_type, 'year_quarter': quarters[-1]},
+                            index=[0])
+    # Filter out non-valid days
+    df = df_daily.query(f"{pm_type}_valid_daily")
+    # Split 12 quarters into 4-quarter years
+    years = [quarters[0:4], quarters[4:8], quarters[8:12]]  # list of list of four year-quarters
+    dva, dvh = [], []
+    for year in years:  # list of four year-quarters
+        print('year', year)
+        # filter to these years
+        df_temp = df[df.year_quarter.isin(year)]
+        # Get design values for PM2.5 column
+        agg_dict = {f"pm2.5_{pm_type}_daily": [dv_annual, dv_hour]}
+        df_dv = df_temp.agg(agg_dict)
+        dva.append(df_dv.T['dv_annual'].iloc[0]); dvh.append(df_dv.T['dv_hour'].iloc[0])
+    # Calculate 3-year averages
+    df = pd.DataFrame({'annual': np.mean(dva), 'hour': np.mean(dvh),
+                       'pm_type': pm_type, 'year_quarter': quarters[-1]},
+                      index=[0])
+    return df
+
+
+def annual_data(df_daily: pd.DataFrame, pm_type: str):
+    """Return Annually aggregated data (means) and validity indicators for PM2.5 columns.
+
+    For any column that has "pm2.5" in it's name, calculate the annual mean and
+    count of observations that are non-missing. Create an indicator for >=
+    than 75% valid days (18 hours), is in NAAQS design value
+     determination.
+    pm_column: column-name string of the PM2.5 column to calculate the design values for.
+    """
+    df = df_daily.copy(deep=True)
+    df['year_quarter'] = df.year.astype(str) + '-' + df.quarter.astype(str)
+    # Create lists of quarters in 3-year chunks
+    three_year_lists = quarter_list(df)
+    df_list = []
+    for three_years in three_year_lists:
+        print('three_years', three_years)
+        # Filter to the quarters in the list
+        df_temp = df[df.year_quarter.isin(three_years)]
+        # DVs for the 3-year period
+        df_dv = calculate_design_values(df_temp, three_years, pm_type)
+        df_list.append(df_dv)
+    return pd.concat(df_list, ignore_index=True)
+
+
+def create_site_dvs(site_dict):
+    # Load combined site data
+    df = load_combined(site_dict)
+    # Create qualifier / exceptional event indicator
+    df = add_exceptional_indicator(df)
+    # Create Summary Statistics
+
+    # Drop Exceptional Hours
+    df = df.query("drop_qualifier == False")
+    # Make Daily dataset (with indicators for valid > 75% complete)
+    df_daily = daily_data(df)
+    # Calculate DVs for all quarters
+    pm_type = 'epa'
+    df_list = []
+    for pm_type in ['epa', 'pa']:
+        print('starting PM source', pm_type)
+        df_list.append(annual_data(df_daily, pm_type))
+    df_dv = pd.concat(df_list, ignore_index=True)
+    df_dv.to_csv(PATHS.data.temp / 'design_value_est.csv', index=False)
+
+
+def create_sample_dvs():
+    site_dict = {'county': '037', 'site': '4004'}
+    create_site_dvs(site_dict)
+
+
+
+#
+# site_dict = {'county': '037', 'site': '4004'}
+# create_site_dvs(site_dict)
 
 
 ################################################################################
