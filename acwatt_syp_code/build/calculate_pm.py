@@ -12,6 +12,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import statsmodels.api as sm
+from statsmodels.iolib.summary2 import summary_col
+from stargazer.stargazer import Stargazer, LineLocation
 import time
 import os
 import io
@@ -398,8 +400,57 @@ def add_exceptional_indicator(df):
     return df
 
 
-def fill_in_missing(df):
+def fill_in_missing_with_idw(df):
     df['pm2.5_epa.idw.pa'] = np.where(df['pm2.5_epa'].isna(), df['pm2.5_pa'], df['pm2.5_epa'])
+    return df
+
+
+def fill_in_missing_with_OLS(df, site_dict, alpha=0.05):
+    # Remove missing values from y and x for regression
+    df1 = df[~df['pm2.5_epa'].isna() & ~df['pm2.5_pa'].isna()]
+    y = df1['pm2.5_epa']
+    x = df1['pm2.5_pa']
+    # Run regression
+    model1 = sm.OLS(y, x).fit()
+    # Generate predicted EPA values from full set of weighted avereage Purple Air values
+    epa_hat = model1.predict(df['pm2.5_pa'])
+    # Replace EPA missing values with OLS prediction (nc = No Constant)
+    df['pm2.5_epa.olsnc.pa'] = np.where(df['pm2.5_epa'].isna(), epa_hat, df['pm2.5_epa'])
+    df['errors_nc'] = df['pm2.5_epa'] - epa_hat
+
+    # Do the same using OLS with a constant (yc = Yes Constant)
+    x2 = sm.add_constant(x)
+    model2 = sm.OLS(y, x2).fit()
+
+    # Push predictions into missing EPA slots (add constant to full PurpleAir column to predict)
+    predictions = model2.get_prediction(sm.add_constant(df['pm2.5_pa']))
+    frame = predictions.summary_frame(alpha=alpha)
+    epa_hat2 = frame['mean']
+    df['pm2.5_epa.olsyc.pa'] = np.where(df['pm2.5_epa'].isna(), epa_hat2, df['pm2.5_epa'])
+    df['errors_yc'] = df['pm2.5_epa'] - epa_hat2
+    # Get prediction confidence interval upper and lower bounds for each observations
+    df['upper.yc'] = frame.obs_ci_upper  # Full set of upper bounds
+    df['lower.yc'] = frame.obs_ci_lower  # Full set of lower bounds
+    # Create two more combined sets of EPA PM, filling in upper and lower predictions
+    df['pm2.5_epa.olsyc.pa.upper'] = np.where(df['pm2.5_epa'].isna(), df['upper.yc'], df['pm2.5_epa'])
+    df['pm2.5_epa.olsyc.pa.lower'] = np.where(df['pm2.5_epa'].isna(), df['lower.yc'], df['pm2.5_epa'])
+
+    # Save the regression summaries
+    c_s = f'{site_dict["county"]}-{site_dict["site"]}'
+    stargazer = Stargazer([model1, model2])
+    stargazer.title(f'{c_s} NAAQS Monitor PM2.5 on Weighted Average PurpleAir PM2.5')
+    # stargazer.custom_columns(['No Intercept', 'Intercept'], [1, 1])
+    # stargazer.show_model_numbers(False)
+    stargazer.show_degrees_of_freedom(False)
+    stargazer.rename_covariates({'pm2.5_pa': 'PurpleAir IDW Average'})
+    stargazer.dependent_variable_name(f'Reported NAAQS Monitor PM2.5')
+    stargazer.add_line('Preferred', ['No', 'Yes'], LineLocation.FOOTER_TOP)
+    stargazer.table_label = f'tab:reg_{c_s}'
+    table = stargazer.render_latex()
+    p = PATHS.output / 'tables' / f'epa_OLS_idw_pa_site-{c_s}.tex'
+    with open(p, "w") as file1:
+        # Writing data to a file
+        file1.write(table)
     return df
 
 
@@ -433,7 +484,7 @@ def add_quarterly_valid_indicators(df: pd.DataFrame):
 
 def clean_colnames(df_daily):
     cols = ['_'.join(col).strip() for col in df_daily.columns.values]
-    cols = [s.replace('pm2.5_', '') if not '_mean' in s else s for s in cols]
+    cols = [s.replace('pm2.5_', '') if '_mean' not in s else s for s in cols]
     cols = [s.replace('_mean', '') for s in cols]
     cols = [s.replace('_count','_hourcount') for s in cols]
     cols = [s+'_daily' if 'pm2.5' in s else s for s in cols]
@@ -577,58 +628,65 @@ def create_site_dvs(site_dict):
 
     # Drop Exceptional Hours
     df = df.query("drop_qualifier == False")
-    # Make new combined EPA-PA column to fill in missing EPA
-    df = fill_in_missing(df)
+    # Make new combined EPA-PA column with IDW avereage PA data
+    df = fill_in_missing_with_idw(df)
+    # Make new combined EPA-PA column with OLS prediction from IDW PA data
+    df = fill_in_missing_with_OLS(df, site_dict)
     # Make Daily dataset (with indicators for valid > 75% complete)
     df_daily = daily_data(df)
     # Calculate DVs for all quarters
     df_list = []
-    for pm_type in ['epa', 'pa', 'epa.idw.pa']:
+    for pm_type in ['epa', 'pa', 'epa.idw.pa', 'epa.olsnc.pa', 'epa.olsyc.pa', 'epa.olsyc.pa.lower', 'epa.olsyc.pa.upper']:
         df_list.append(annual_data(df_daily, pm_type))
     df_dv = pd.concat(df_list, ignore_index=True)
     df_dv['county'] = site_dict['county']; df_dv['site'] = site_dict['site']
     return df_dv
 
 
-def generate_differences(df, left='epa', right='epa.idw.pa'):
+def generate_differences(df, left, right_list):
     """Return difference: subtract left from right. Positive => right is larger"""
     dfl = df[df.pm_type == left].drop(columns='pm_type')
-    dfr = df[df.pm_type == right].drop(columns='pm_type')
-    df2 = dfl.merge(dfr,
-                    how='inner',
-                    on=['year_quarter', 'county', 'site'],
-                    suffixes=(f'_{left}', f'_{right}'))
-    df2['annual_dv_diff'] = df2[f'annual_{right}'] - df2[f'annual_{left}']
-    df2['hour_dv_diff'] = df2[f'hour_{right}'] - df2[f'hour_{left}']
-    df2.insert(0, 'year_quarter', df2.pop('year_quarter'))
-    df2.insert(0, 'site', df2.pop('site'))
-    df2.insert(0, 'county', df2.pop('county'))
-    return df2
+    for right in right_list:
+        dfr = df[df.pm_type == right].drop(columns='pm_type')
+        dfl = dfl.merge(dfr,
+                        how='inner',
+                        on=['year_quarter', 'county', 'site'],
+                        suffixes=(f'_{left}', f'_{right}'))  # suffixes only matters the first time
+        dfl = dfl.rename(columns={'annual': f'annual_{right}', 'hour': f'hour_{right}'})  # this only renames after the first time
+        dfl[f'annual_dv_diff_{right}'] = dfl[f'annual_{right}'] - dfl[f'annual_{left}']
+        dfl[f'hour_dv_diff_{right}'] = dfl[f'hour_{right}'] - dfl[f'hour_{left}']
+    dfl.insert(0, 'year_quarter', dfl.pop('year_quarter'))
+    dfl.insert(0, 'site', dfl.pop('site'))
+    dfl.insert(0, 'county', dfl.pop('county'))
+    return dfl
 
 
-def create_sample_dvs(left='epa', right='epa.idw.pa'):
+def create_sample_dvs(left='epa', right_list=None):
+    if right_list is None:
+        right_list = ['epa.idw.pa', 'epa.olsnc.pa', 'epa.olsyc.pa', 'epa.olsyc.pa.upper', 'epa.olsyc.pa.lower']  #
+    # Load the county-site pairs
     aqs_tbl = load_15_sites()
     diffs_list, dv_list = [], []
     # For each EPA site-county in list
     for county, site in aqs_tbl:  # cs_list
         site_dict = {'county': county, 'site': site}
         df = create_site_dvs(site_dict)
-        diffs_list.append(generate_differences(df, left=left, right=right))
+        diffs_list.append(generate_differences(df, left=left, right_list=right_list))
         dv_list.append(df)
     df_dv = pd.concat(dv_list, ignore_index=True)
     df_dv.to_csv(PATHS.data.temp / 'design_value_est.csv', index=False)
     df_save = pd.concat(diffs_list, ignore_index=True)
-    df_save['invalid quarter DV due to too many missing days'] = df_save.apply(
-        lambda x: np.isnan(x[f'annual_{left}']) or np.isnan(x[f'hour_{left}']) or np.isnan(x[f'annual_{right}']) or np.isnan(x[f'hour_{right}']), axis=1)
+    df_save['invalid quarter DV due to too many missing days'] = df_save.isnull().any(axis=1)
     df_save.to_csv(PATHS.data.temp / 'design_value_differences.csv', index=False)
-    df_stats = df_save.groupby(['county', 'site']).agg({'annual_dv_diff': ['mean', 'std', 'max', 'min'],
-                                             'hour_dv_diff': ['mean', 'std', 'max', 'min'],
-                                             'invalid quarter DV due to too many missing days': ['mean', 'size']})
+    agg_dict = {f'annual_dv_diff_{right}': ['mean', 'std', 'max', 'min'] for right in right_list}
+    agg_dict.update({f'hour_dv_diff_{right}': ['mean', 'std', 'max', 'min'] for right in right_list})
+    agg_dict.update({'invalid quarter DV due to too many missing days': ['mean', 'size']})
+    df_stats = df_save.groupby(['county', 'site']).agg(agg_dict)
     df_stats.reset_index().to_csv(PATHS.data.temp / 'design_value_site-stats.csv', index=False)
     print()
 
 
-def generate_predictions():
+def generate_predictions(df_):
     pass
 
 
