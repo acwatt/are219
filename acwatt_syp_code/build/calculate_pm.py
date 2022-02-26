@@ -5,11 +5,14 @@
 # Built-in Imports
 import logging
 import datetime as dt
+
+import botocore.exceptions
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import statsmodels.api as sm
+import time
 import os
 import io
 # Third-party Imports
@@ -172,16 +175,40 @@ def download_file(bucket_name, bucket_filepath):
                              region_name=AWS.region,
                              aws_access_key_id=AWS.access_key,
                              aws_secret_access_key=AWS.secret_key)
-    try:
-        obj = s3_client.get_object(Bucket=bucket_name, Key=bucket_filepath)
-        df = pd.read_csv(io.BytesIO(obj['Body'].read()), encoding='utf8', header=[0,1])
-        return df
-        # response = s3_client.get_object(Bucket=bucket, Key=bucket_file)
-        # response = s3_client.upload_file(file_path, bucket, object_name)
-    except ClientError as e:
-        print(f'Unable to retrieve S3 object {bucket_filepath}')
-        logging.error(e)
-        return False
+    # try:
+    #     obj = s3_client.get_object(Bucket=bucket_name, Key=bucket_filepath)
+    #     df = pd.read_csv(io.BytesIO(obj['Body'].read()), encoding='utf8', header=[0,1])
+    #     return df
+    #     # response = s3_client.get_object(Bucket=bucket, Key=bucket_file)
+    #     # response = s3_client.upload_file(file_path, bucket, object_name)
+    # except ClientError as e:
+    #     logger.warning(f'\nUnable to retrieve S3 object {bucket_filepath}. It was probably privat when you tried to download it originally.')
+    #     logging.error(e)
+    #     return False
+    # except botocore.exceptions.ResponseStreamingError:
+    #     pass
+
+    sleepy_time = 1
+    func_return = None
+    while sleepy_time < 33 and func_return is None:
+        try:
+            obj = s3_client.get_object(Bucket=bucket_name, Key=bucket_filepath)
+            df = pd.read_csv(io.BytesIO(obj['Body'].read()), encoding='utf8', header=[0, 1])
+            return df
+        except ClientError as error:
+            print()
+            logging.error(error)
+            logger.warning(f'Unable to retrieve S3 object {bucket_filepath}. It was probably privat when you tried to download it originally.')
+            return None
+        except botocore.exceptions.ResponseStreamingError as error:
+            logger.info(f"Sleeping for {sleepy_time} to give AWS time to "
+                        f"connect resources.")
+            time.sleep(sleepy_time)
+            sleepy_time = sleepy_time*2
+    logger.warning(f"Reached max retry time to download S3 object {bucket_filepath}.\nMoving on.")
+    return None
+
+
 
 
 def minmax(series):
