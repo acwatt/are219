@@ -29,4 +29,29 @@
   - regression?
   - Diff-in-diff across attainment threshold? Places on either side of the threshold might be close in many ways, but one has avoided a non-attainment status and the fines.
 
+
+# Paper
+- Fix long line in Qualifier exclusions table
+- Finish data cleaning steps table
+
 # For Summer exporatory
+
+
+# Code Modifications:
+- IDW: change from just within radius or min number to min number within 25 mi to cover most dates
+- Use all within 25 mi in predictive, maybe lasso out the unecessary
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

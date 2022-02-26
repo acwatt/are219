@@ -21,3 +21,9 @@
   - What is the uncertainty in predicting the EPA's PM with weighted avg? (just regression SEs? Assuming classical measurement error of the PA sensors. Could flag all missing from PA, then use all other PA to predict missing PA for each PA and see if there is a bias in the missing. Hopefully random, but perhaps more errors occur when pollution is higher? Perhaps people worry more about pollution and move their sensors around when pollution is higher?)
   - What is the uncertainty in predicting the EPA's PM with regression of PA sensors?
 - Are all the qualifiers indicators for that hour's NAAQS removal?
+
+
+
+
+
+
