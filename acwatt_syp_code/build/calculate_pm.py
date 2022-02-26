@@ -494,7 +494,7 @@ def calculate_design_values(df_daily: pd.DataFrame, quarters: list, pm_type: str
                              'pm_type': pm_type, 'year_quarter': quarters[-1]},
                             index=[0])
     # Filter out non-valid days
-    df = df_daily.query(f"{pm_type}_valid_daily")
+    df = df_daily.query(f"`{pm_type}_valid_daily`")
     # Split 12 quarters into 4-quarter years
     years = [quarters[0:4], quarters[4:8], quarters[8:12]]  # list of list of four year-quarters
     dva, dvh = [], []
