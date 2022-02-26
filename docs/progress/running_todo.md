@@ -33,14 +33,27 @@
 # Paper
 - Fix long line in Qualifier exclusions table
 - Finish data cleaning steps table
+- Get information on which counties are currently in attainment
 
 # For Summer exporatory
 
 
 # Code Modifications:
 - IDW: change from just within radius or min number to min number within 25 mi to cover most dates
-- Use all within 25 mi in predictive, maybe lasso out the unecessary
-
+- Use all within 25 mi in predictive, maybe lasso out the non-predictive ones.
+- For monitors that have few sensors, multiple didn't download originally so should either be removed from the lookup table
+  or the algo should keep moving down the list until min_sensors is reached.
+- Download sensors from S3 using threads to increase download.
+  - Cache sensors that are used multiple times (load all lists first, check which are used multiple times.)
+  - Implement max sensors per EPA monitor?
+- Fix following issue:
+  ```shell
+   See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+    df['pm2.5_epa.olsyc.pa.upper'] = np.where(df['pm2.5_epa'].isna(), df['upper.yc'], df['pm2.5_epa'])
+  /media/a/E/Programming/github/are219/acwatt_syp_code/build/calculate_pm.py:436: SettingWithCopyWarning: 
+  A value is trying to be set on a copy of a slice from a DataFrame.
+  Try using .loc[row_indexer,col_indexer] = value instead
+  ```
 
 
 
