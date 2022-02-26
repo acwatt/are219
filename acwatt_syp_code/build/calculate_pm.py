@@ -369,6 +369,11 @@ def add_exceptional_indicator(df):
     return df
 
 
+def fill_in_missing(df):
+    df['pm2.5_epa.idw.pa'] = np.where(df['pm2.5_epa'].isna(), df['pm2.5_pa'], df['pm2.5_epa'])
+    return df
+
+
 def valid_daily(x: pd.Series):
     """NAAQS design value daily average validity criterion."""
     return x.count() >= 0.75*24
@@ -488,7 +493,6 @@ def calculate_design_values(df_daily: pd.DataFrame, quarters: list, pm_type: str
     """
     # Check if DVs are valid based on all-quarters-valid criteria
     invalid = invalid_dv(df_daily, pm_type)
-    print('Invalid?', invalid)
     if invalid:
         return pd.DataFrame({'annual': -9999, 'hour': -9999,
                              'pm_type': pm_type, 'year_quarter': quarters[-1]},
@@ -499,7 +503,6 @@ def calculate_design_values(df_daily: pd.DataFrame, quarters: list, pm_type: str
     years = [quarters[0:4], quarters[4:8], quarters[8:12]]  # list of list of four year-quarters
     dva, dvh = [], []
     for year in years:  # list of four year-quarters
-        print('year', year)
         # filter to these years
         df_temp = df[df.year_quarter.isin(year)]
         # Get design values for PM2.5 column
@@ -528,7 +531,6 @@ def annual_data(df_daily: pd.DataFrame, pm_type: str):
     three_year_lists = quarter_list(df)
     df_list = []
     for three_years in three_year_lists:
-        print('three_years', three_years)
         # Filter to the quarters in the list
         df_temp = df[df.year_quarter.isin(three_years)]
         # DVs for the 3-year period
@@ -546,27 +548,47 @@ def create_site_dvs(site_dict):
 
     # Drop Exceptional Hours
     df = df.query("drop_qualifier == False")
+    # Make new combined EPA-PA column to fill in missing EPA
+    df = fill_in_missing(df)
     # Make Daily dataset (with indicators for valid > 75% complete)
     df_daily = daily_data(df)
     # Calculate DVs for all quarters
-    pm_type = 'epa'
     df_list = []
-    for pm_type in ['epa', 'pa']:
-        print('starting PM source', pm_type)
+    for pm_type in ['epa', 'pa', 'epa.idw.pa']:
         df_list.append(annual_data(df_daily, pm_type))
     df_dv = pd.concat(df_list, ignore_index=True)
+    df_dv['county'] = site_dict['county']; df_dv['site'] = site_dict['site']
     df_dv.to_csv(PATHS.data.temp / 'design_value_est.csv', index=False)
+    return df_dv
+
+
+def generate_differences(df, left='epa', right='epa.idw.pa'):
+    """Return difference: subtract left from right. Positive => right is larger"""
+    dfl = df[df.pm_type == left].drop(columns='pm_type')
+    dfr = df[df.pm_type == right].drop(columns='pm_type')
+    df2 = dfl.merge(dfr,
+                    how='inner',
+                    on=['year_quarter', 'county', 'site'],
+                    suffixes=(f'_{left}', f'_{right}'))
+    df2['annual_dv_diff'] = df2[f'annual_{right}'] - df2[f'annual_{left}']
+    df2['hour_dv_diff'] = df2[f'hour_{right}'] - df2[f'hour_{left}']
+    df2.insert(0, 'year_quarter', df2.pop('year_quarter'))
+    df2.insert(0, 'site', df2.pop('site'))
+    df2.insert(0, 'county', df2.pop('county'))
+    return df2
 
 
 def create_sample_dvs():
-    site_dict = {'county': '037', 'site': '4004'}
-    create_site_dvs(site_dict)
-
-
-
-#
-# site_dict = {'county': '037', 'site': '4004'}
-# create_site_dvs(site_dict)
+    aqs_tbl = load_15_sites()
+    diffs_list = []
+    # For each EPA site-county in list
+    for county, site in aqs_tbl:  # cs_list
+        site_dict = {'county': county, 'site': site}
+        df = create_site_dvs(site_dict)
+        diffs = generate_differences(df, left='epa', right='epa.idw.pa')
+        diffs_list.append(diffs)
+    df_save = pd.concat(diffs_list, ignore_index=True)
+    df_save.to_csv(PATHS.data.temp / 'design_value_differences.csv')
 
 
 ################################################################################
