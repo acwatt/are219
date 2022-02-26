@@ -397,6 +397,19 @@ def add_quarterly_valid_indicators(df: pd.DataFrame):
     return df.merge(quarterly, on=['year', 'quarter'], how='left')
 
 
+def clean_colnames(df_daily):
+    cols = ['_'.join(col).strip() for col in df_daily.columns.values]
+    cols = [s.replace('pm2.5_', '') if not '_mean' in s else s for s in cols]
+    cols = [s.replace('_mean', '') for s in cols]
+    cols = [s.replace('_count','_hourcount') for s in cols]
+    cols = [s+'_daily' if 'pm2.5' in s else s for s in cols]
+    df_daily.columns = cols
+    df_daily.insert(0, 'quarter', df_daily.pop('quarter'))
+    df_daily.insert(0, 'year', df_daily.pop('year'))
+    df_daily = df_daily.astype({'quarter': int, 'year': int}).reset_index()
+    return df_daily
+
+
 def daily_data(df: pd.DataFrame):
     """Return Daily aggregated data (means) and validity indicators for PM2.5 columns.
 
@@ -408,15 +421,7 @@ def daily_data(df: pd.DataFrame):
     agg_dict = {col: ['mean', 'count', valid_daily] for col in df.columns if 'pm2.5' in col}
     agg_dict.update({'quarter': 'mean', 'year': 'mean'})
     df_daily = df.groupby('date_local').agg(agg_dict)
-    df_daily.columns = ['_'.join(col).strip() for col in df_daily.columns.values]
-    df_daily = df_daily.rename(columns={'quarter_mean': 'quarter', 'year_mean': 'year',
-                                        'pm2.5_epa_mean': 'pm2.5_epa_daily',
-                                        'pm2.5_epa_count': 'epa_hourcount',
-                                        'pm2.5_epa_valid_daily': 'epa_valid_daily',
-                                        'pm2.5_pa_mean': 'pm2.5_pa_daily',
-                                        'pm2.5_pa_count': 'pa_hourcount',
-                                        'pm2.5_pa_valid_daily': 'pa_valid_daily'})
-    df_daily = df_daily.astype({'quarter': int, 'year': int}).reset_index()
+    df_daily = clean_colnames(df_daily)
     # Add indicators if quarter is valid
     df_daily = add_quarterly_valid_indicators(df_daily)
     return df_daily
