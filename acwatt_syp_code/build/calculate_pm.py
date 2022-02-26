@@ -587,7 +587,6 @@ def create_site_dvs(site_dict):
         df_list.append(annual_data(df_daily, pm_type))
     df_dv = pd.concat(df_list, ignore_index=True)
     df_dv['county'] = site_dict['county']; df_dv['site'] = site_dict['site']
-    df_dv.to_csv(PATHS.data.temp / 'design_value_est.csv', index=False)
     return df_dv
 
 
@@ -607,17 +606,30 @@ def generate_differences(df, left='epa', right='epa.idw.pa'):
     return df2
 
 
-def create_sample_dvs():
+def create_sample_dvs(left='epa', right='epa.idw.pa'):
     aqs_tbl = load_15_sites()
-    diffs_list = []
+    diffs_list, dv_list = [], []
     # For each EPA site-county in list
     for county, site in aqs_tbl:  # cs_list
         site_dict = {'county': county, 'site': site}
         df = create_site_dvs(site_dict)
-        diffs = generate_differences(df, left='epa', right='epa.idw.pa')
-        diffs_list.append(diffs)
+        diffs_list.append(generate_differences(df, left=left, right=right))
+        dv_list.append(df)
+    df_dv = pd.concat(dv_list, ignore_index=True)
+    df_dv.to_csv(PATHS.data.temp / 'design_value_est.csv', index=False)
     df_save = pd.concat(diffs_list, ignore_index=True)
-    df_save.to_csv(PATHS.data.temp / 'design_value_differences.csv')
+    df_save['invalid quarter DV due to too many missing days'] = df_save.apply(
+        lambda x: np.isnan(x[f'annual_{left}']) or np.isnan(x[f'hour_{left}']) or np.isnan(x[f'annual_{right}']) or np.isnan(x[f'hour_{right}']), axis=1)
+    df_save.to_csv(PATHS.data.temp / 'design_value_differences.csv', index=False)
+    df_stats = df_save.groupby(['county', 'site']).agg({'annual_dv_diff': ['mean', 'std', 'max', 'min'],
+                                             'hour_dv_diff': ['mean', 'std', 'max', 'min'],
+                                             'invalid quarter DV due to too many missing days': ['mean', 'size']})
+    df_stats.reset_index().to_csv(PATHS.data.temp / 'design_value_site-stats.csv', index=False)
+    print()
+
+
+def generate_predictions():
+    pass
 
 
 ################################################################################
