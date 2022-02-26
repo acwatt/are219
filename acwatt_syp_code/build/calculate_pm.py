@@ -148,7 +148,7 @@ def site_plots(county, site):
 
 
 def load_epa(county: str, site: str):
-    logger.info(f"Loading EPA data for site {county}-{site}")
+    logger.info(f"Loading EPA data")
     df_epa = pd.read_csv(PATHS.data.epa_pm25 / f"county-{county}_site-{site}_hourly.csv")
     df_epa['year'] = df_epa['date_local'].str.split("-").str[0]
     df_epa['quarter'] = df_epa.apply(lambda row: make_quarter(row['date_local']), axis=1)
@@ -266,13 +266,14 @@ def transform_pa_df(df):
 
 
 def concat_sensors(sensor_list: pd.DataFrame, power=1):  # IDW power
+    logger.info(f"Loading {len(sensor_list)} PurpleAir sensors.")
     df_list = []
     for sensor_id, dist in zip(sensor_list['sensor_index'], sensor_list['dist_mile']):
-        print(f'Starting sensor {sensor_id}')
+        print("*", end='')
         # Downlaod the file to dataframe
         bucket_file = f'{sensor_id:07d}.csv'
         df_pa = download_file(AWS.bucket_name, bucket_file)
-        if df_pa is False:
+        if df_pa is None:
             continue  # Skip this sensor if there is no file in the S3 for it
         # Transform the dataframe to get PM2.5 and humidity
         df_pa = transform_pa_df(df_pa)
@@ -280,6 +281,7 @@ def concat_sensors(sensor_list: pd.DataFrame, power=1):  # IDW power
         # make_hourly_avg_plots(df_pa, df_epa, sensor_id)
         df_list.append(df_pa)
 
+    print()
     if not df_list:
         return False
     df = pd.concat(df_list, ignore_index=True).sort_values(['created_at', 'sensor_id'])
@@ -308,7 +310,7 @@ def filter_sensors(sensor_list, threshold, min_sensors=10):
 
 
 def add_pa_pm(df_epa, county, site, threshold=5, power=1, min_sensors=10):
-    logger.info(f"Adding PurpleAir PM data to EPA data for site {county}-{site}.")
+    logger.info(f"Adding PurpleAir PM data to EPA data")
     logger.info(f"Using radius of {threshold}, IDW exponent of {power}, and min # of sensors {min_sensors}.")
     lookup_dir = PATHS.data.tables / 'epa_pa_lookups'
     # Load sensor list for this site
@@ -365,7 +367,7 @@ def test_15_sites(run_all=False):
         if p.exists() and not run_all:
             df_epa = pd.read_csv(p)
         else:
-            logger.info(f'Starting PA weighted average for site {county}-{site}')
+            logger.info(f'{county}-{site}: Starting PA weighted average' + '='*30)
             # Load EPA data
             df_epa = load_epa(county, site)
             # Calculate hourly weighted average PurpleAir PM2.5 for this site
@@ -521,7 +523,7 @@ def calculate_design_values(df_daily: pd.DataFrame, quarters: list, pm_type: str
     # Check if DVs are valid based on all-quarters-valid criteria
     invalid = invalid_dv(df_daily, pm_type)
     if invalid:
-        return pd.DataFrame({'annual': -9999, 'hour': -9999,
+        return pd.DataFrame({'annual': np.nan, 'hour': np.nan,
                              'pm_type': pm_type, 'year_quarter': quarters[-1]},
                             index=[0])
     # Filter out non-valid days
