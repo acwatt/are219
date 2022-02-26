@@ -364,7 +364,7 @@ def add_exceptional_indicator(df):
     df_r = load_qualifiers()
     df_l['Qualifier Code'] = df_l.qualifier.str.split(' ', expand=True)[0]
     df_l = df_l.merge(df_r, on='Qualifier Code', how='left')
-    exception_list = ['NULL', 'NULL QC', 'REQEXC']
+    exception_list = ['REQEXC']  # 'NULL', 'NULL QC'
     df['drop_qualifier'] = df_l['Qualifier Type Code'].isin(exception_list)
     return df
 
