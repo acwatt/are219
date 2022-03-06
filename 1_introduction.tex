@@ -1,0 +1,197 @@
+
+%===================================================
+%   Introduction
+%===================================================
+  
+% Something about measurement error in environmental economics... robustness-to-measurement-error replication study, focusing on omitted measurement error from scientifically measured data (like temperature, elevation, pollution concentration, satellite approximated surface characteristics, etc).
+
+
+% =====================================
+%               1. HOOK (1-2)
+% =====================================
+% A good introduction starts with a good “hook,” i.e., something that grabs the reader’s attention and makes her want to keep reading. Here, the closer one can get to the reader, the better. Likewise, the broader one can go, the better. Bad hooks tend to appeal to the literature: “A long literature in economics has looked at ...” If that is the case, do you really want to make it any longer? Good hooks tend to relate to the real world: A lot of the food we buy at the grocery store is grown in the context of long value chains. What does the first link in that value chain look like? What does participating in those value chains do for the people who actually grow the food we eat? The hook should be one or two paragraphs long.
+
+% Attract the reader’s interest by telling them that this paper relates to something interesting. What makes a topic interesting? Some combination of the following attributes makes Y something worth looking at.
+% Y matters: When Y rises or falls, people are hurt or helped.
+% Y is puzzling: it defies easy explanation.
+% Y is controversial: some argue one thing while other say another.
+% Y is big (like the service sector) or common (like traffic jams).
+
+% Things to avoid:
+% The bait and switch : promising an interesting topic but delivering something else, in particular, something boring.
+% “all my friends are doing it” : presenting no other motivation for a topic than that other people have written papers on it.
+
+
+A critical input to good air quality regulation is good air quality measurement.
+%
+Specifically, the efficiency of current pollution regulation hinges on our ability to accurately monitor air quality across the country.
+%
+In the United States, air quality is assessed by the government using a network of monitors that measure levels of ambient air pollution to a high degree of accuracy.
+%
+The Environmental Protection Agency (EPA) requires these monitors to measure average daily air quality at specific frequencies to ensure enough data is collected for effective regulation.\footnote{The three main measurement frequencies require measuring daily average air quality every 1, 3 or 6 days.}
+%
+During the days that are required to be measured, the goal is to accurately measure the daily average pollution concentration at the site of the monitor.
+%
+Statistics of these daily averages, called \textit{design values}, are then used to decide if a region is in or out of compliance with the National Ambient Air Quality Standards (NAAQS).
+
+
+Though these air quality monitoring stations are regulated by the EPA, they are managed by local and state officials who control when the monitors are on or off.
+%
+For added flexibility, the EPA allows for some portion of air quality readings to be missing when calculating the design values that determine a region's compliance with the NAAQS.
+% \citep{epa_appendix_2017}
+For instance, when measuring particulate matter in the air (one of the most common types of pollution), the EPA allows more than 25\% of measurements to be missing or omitted \citep{epaAppendixPart502017}.\footnote{Design values are used to decide compliance with NAAQS and are statistics of daily averages. In calculating daily averages, the daily average is valid if at least 75\% of the hourly readings (18 of 24 hours) are reported and valid. In calculating the design values, the design value is valid if at least 75\% of daily averages in each year are reported and valid. Combined, the minimum reporting standard is actually 56-57\% of all required hourly PM2.5 readings. This is slightly different for each site depending on their reporting frequency (every 1, 3, or 6 days). }
+%
+In effect, this flexibility means that local managers of monitoring stations can choose up to 25\% of readings to omit -- readings that would otherwise be used to determine of compliance.
+%
+Though the measurements of air quality at the site of the monitor are fairly accurate when the monitor is on, omitting some measurements (by turning the monitor off) can bias the daily average and compliance statistics calculated from reported measurements.
+% 
+Additionally, if a region is out of compliance with the standards, the region or state can potentially face large penalties and forced adoption of expensive abatement technology.
+
+
+The combination of large penalties and the discretion local officials have to drop measurements that could negatively impact compliance status leads to misaligned incentives between federal regulators and local officials in charge of monitoring air quality, potentially leading to biased air quality statistics.
+%
+Indeed, previous research suggests that there is mismeasurement of air quality statistics occurring;
+%\cite{zou_unwatched_2021} and \cite{mu_whats_2021}
+\cite{zouUnwatchedPollutionEffect2021}, \cite{muWhatMissingEnvironmental2021}, \cite{graingerRegulatorsStrategicallyAvoid2019} and \cite{graingerDiscriminationAmbientAir2019} provide evidence of strategic behavior in pollution measurement on behalf of local pollution regulators.
+%
+This paper focuses the size of mismeasurement occurring and the effects this mismeasurement has on determining compliance.
+
+
+
+ 
+
+
+
+
+
+
+
+% =====================================
+%       2. RESEARCH QUESTION (1)
+% =====================================
+% After hooking the reader in and setting the stage, it is time to state your research question as clearly as possible. I like to do so by stating my actual research question as the first sentence of this part of my introductions. “What is the impact of participation in contract farming on the welfare of those who participate?” The clearer this is stated, the better, because the fewer are the occasions for the reader to be disappointed. This should be one paragraph long.
+
+% Tell the reader what this paper actually does. Think of this as the point in a trial where having detailed the crime, you now identify a perpetrator and promise to provide a persuasive case. The reader should have an idea of a clean research question that will have a more or less satisfactory answer by the end of the paper. Examples follow below. The question may take two paragraphs. At the end of the first (2nd paragraph of the paper) or possibly beginning of the second (3rd paragraph overall) you should have the “This paper addresses the question” sentence.
+
+% Research question
+Specifically, I explore the question: is there a bias in reported air quality data and how might this bias affect NAAQS compliance?
+% Explanation
+To explore these issues, I utilize a new dataset of air quality measurements collected from consumer products (PurpleAir sensors).
+%
+These data help provide an independent groundtruth comparison to air quality reported to the EPA.
+%
+The most promising new data coming from these consumer products are PM2.5 measurements -- the concentration of particles in air that are 2.5 micrometers and below.
+%
+Specifically, I combine PM2.5 measurements from multiple PurpleAir sensors that are near to federally-regulated monitoring stations to estimate the PM2.5 value at the monitoring station; I use inverse distance weighting to create a weighted average of PurpleAir measurements.\footnote{Inverse distance weighting has drawbacks: it can apply very large weight to sensors very near to the NAAQS monitor and it does not take into account that some PurpleAir sensors will be better predictors for the NAAQS monitor. See Appendix section \ref{sec:app-prediction} for an alternative strategy that I plan to implement.}
+%
+This allows me to construct predicted values of PM2.5 at the station during times when the station's readings would be used to calculated NAAQS compliance but when the station was shut down.
+%
+I first examine how these predicted missing PM2.5 values compare to the reported values -- if the missing data is missing at random, I would expect the data to be similar in distribution. Then I use the predicted values from PurpleAir sensors to fill in the gaps in the NAAQS monitor's reported data and use this reconstructed dataset to generate counterfactual NAAQS compliance statistics.
+
+The NAAQS compliance statistics for PM2.5, called \textit{design values}, are functions of the daily averages reported by air quality monitors.
+%
+There are two primary design values for PM2.5: the ``annual'' design value is a three-year average of the daily averages; and ``24-hour'' design value is a three-year average of the annual 98$^{th}$ percentile of daily averages.\footnote{these statistics are discussed more in the Data section. Specific formulas for these statistics are listed in the appendix.}
+%
+Each quarter (3-month period), these two design values are calculated and compared to the NAAQS for PM2.5.
+%
+If a monitor's design value is above the standard, then the monitor (and associated region) is determined to be in \textit{non-attainment} (non-compliance) with the standard for that quarter.
+%
+Using the reconstructed dataset of PM2.5 (PM2.5 estimates for all hours that would be reported from a given NAAQS monitor), I construct counterfactual estimates of the design values that determine if a region is in or out of attainment.
+%
+I use these counterfactuals to determine which regions would have changed compliance status if they reported 100\% of their PM2.5 measurements -- I call these ``flipped regions''.
+%
+I also examine how close these flipped regions were to the regulatory threshold and report a measure of the bias related to the station's missing PM2.5 readings.
+
+
+
+
+% =====================================
+%           3. ANTECEDENTS
+% =====================================
+% After stating your research question, it is time to relate it and what you are doing to the existing literature. Here, relate your work to the five to ten closest studies (the closer to five, the better) in the literature. What the relevant literature -- the antecedents—is will obviously depend on the question at hand. If you are lucky enough to work in a literature that has seen a lot of activity, you may have a hard time narrowing it down, and you will need to judiciously pick the five to ten closest studies. If you are working on a problem that no one has really looked at, or that no one has looked at in a long time, you might have to go back in time a bit further or expand your parameters for what counts as antecedents. Here, what counts is to tell a bit of a story; no one wants to read a bland enumeration of studies: “Johnson (2011) found this. Wang (2012) found that. Smith (2013) found something else. Patel (2015) found something else altogether.” For every topic, the intellectual history of that topic can be told in an interesting way.
+
+% Relate your work to the five closest studies in the literature
+% tell a bit of a story
+
+
+
+Though I am examining the effect of pollution data that are missing from a monitor's record (data missing \textit{in time}), there is also the issue of attempting to measure a region's ambient air quality using spatially sparse locations of monitors (you could consider this and issue of data missing \textit{in space}).
+%
+Previous literature has examined the sparse distribution of regulation-grade monitors and the resulting sensitivity of CAA air quality regulation.
+%\cite{grainger_regulators_2019} and \cite{grainger_discrimination_2019}
+\cite{graingerRegulatorsStrategicallyAvoid2019} and \cite{graingerDiscriminationAmbientAir2019} identify a principle-agent problem with the initial spatial placement of sparse pollution monitors; they find evidence that local regulators may be strategically locating their air quality monitors based on pollution, and possibly socioeconomic characteristics. 
+%\citealt{sullivan_using_2018}, \citealt{fowlie_bringing_2019}
+To address the issue of sparse data and fill in the gaps, several authors have used satellite data products to provide finer resolution pollution data (\citealt{sullivanUsingSatelliteData2018}, \citealt{fowlieBringingSatelliteBasedAir2019}).
+%\cite{zou_unwatched_2021}
+Moving to more time-based issues, \cite{zouUnwatchedPollutionEffect2021} also uses satellite estimates to discuss the issue of strategic behavior in reaction to the timing of pollution monitoring. He provides evidence that some areas have significantly worse air quality on unmonitored days.
+% \cite{mu_whats_2021}
+In related work, \cite{muWhatMissingEnvironmental2021} show potential for strategic monitor shutdowns on days of expected high pollution, contributing to air quality data that is missing \textit{in time}.
+
+
+
+
+
+
+
+
+% =====================================
+%           4. VALUE ADDED
+% =====================================
+% This is where you need to shine. What is your contribution? How does your paper change people’s priors about your topic? Ideally, your paper will have three contributions. For instance, you may be improving on the internal validity front for the question you are looking at by having a better identification strategy. You may also be improving on the external validity front by having data that cover a broader swath of the real world; or you may be performing a mediation analysis that allows identifying what mechanism m the treatment variable D operates through in causing changes in y. Lastly, you may also be bringing a small methodological improvement to the table. But even papers with one contribution deserve to be published, provided that contribution is important enough.
+
+
+% Contribution 1 \cite{fowlie_bringing_2019}
+This paper is most similar to the analysis in \cite{fowlieBringingSatelliteBasedAir2019} where they use PM2.5 estimates generated from satellite data to examine counterfactual compliance status.
+%
+However, they end their analysis noting that the satellite-based data commonly used in these applications has significant prediction error in some areas; this can cause result in incorrect conclusions about design values.
+%\citeauthor{mu_whats_2021}
+This paper compliments their analysis and that of \citeauthor{muWhatMissingEnvironmental2021}, where I use a different form of ground-truth PM2.5 data to also address missing air quality data \textit{in time}. \footnote{PurpleAir data, and other on-the-ground pollution sensors, also have the potential to examine issues of spatial distributions of monitor networks -- work left for future research.} In contrast to \citeauthor{muWhatMissingEnvironmental2021} however, I am examining pollution at times when it is missing in the data but required to be reported, whereas their work was on pollution at times that are not required to be reported.
+%
+While satellite-based PM2.5 estimates have potential for large prediction errors, PurpleAir sensors can be fairly accurate measures of their local air quality\footnote{PurpleAir sensors have specifically been shown to be less accurate than regulation-grade monitors at high levels of PM2.5 concentration. 
+However, the EPA has developed a correction technique that result in PurpleAir readings within 5\% of co-located EPA monitors. 
+This correction technique is used here and explained in more detail in the appendix.} and can be averaged over multiple nearby sensors.
+%
+PurpleAir data also have drawbacks however -- the sensors are highly non-uniform in coverage across the US and are sensitive to specific placement by the consumer, perhaps leading to hyper-local estimates of air quality.
+
+For these reasons, this analysis should be seen as a compliment to previous works.
+%
+As consumer sensors become more widespread, we can augment reliable federal air quality measurements with a growing number of auxiliary data points to better understand the shape of mismeasurement in air quality.
+%
+In this paper, I explore one way of leveraging these data to test for issues with biased reporting of air quality.
+%
+After predicting missing observations using PurpleAir measurements, I do not find any statistically significant flipping of NAAQS compliance status in the 15 California NAAQS monitors. However, for a monitor in Fresno, CA, I do find differences between design values calculated on reported NAAQS data and design values calculated on imputed data; these differences persist for five quarters in 2020 and 2021 and are statistically significant at more than the 95\% level. 
+%
+The largest discrepancy for Fresno is in the 24-hour design values, where the difference is more than 2.5$\mu$g/m$^3$ of PM2.5 on average between 2018 and 2021. 
+%\citep{currie_what_2020}
+Fresno has been out of compliance for some time, and these results mimic previous literature that suggests larger pollution measurement problems in nonattainment areas.
+%
+There is also evidence from previous research that pollution in non-attainment areas has been decreasing at significantly faster rates since the introduction of the CAA \citep{currieWhatCausedRacial2020}.
+%
+Due to the small sample size of this study, there is not much evidence of widespread biased pollution standards. However, with the framework now setup, it would be possible to expand this type of analysis to all NAAQS monitors in the United States and all PurpleAir monitors available. 
+% With continued growth in the adoption of consumer-based air quality monitoring, it is possible we will see increased resolution of air quality and
+
+Ultimately, a possible outcome of this line of research is estimating the possible gains to be made in changing reporting standards. Increasing reporting standards to decrease allowable omitted observations may result in more non-attainment areas and further increases regulatory efficiency. 
+
+% Contribution 2
+
+
+% Contribution 3
+
+
+
+
+
+% =====================================
+%           5. ROAD MAP
+% =====================================
+% Lastly, you should provide your reader with a roadmap to your paper. This section usually starts with “The remainder of this article is organized as follows,” and it lists section and what they do in order. So for a typical paper, it would go: “The remainder of this paper is organized as follows. Section 2 presents the theoretical framework used to study the research question and derives this paper’s core testable prediction. In section 3, the empirical framework is presented, first by discussing the estimation strategy, and then by discussing the identification strategy. Section 4 presents the data and discusses some summary statistics. In section 5, the empirical results are presented and discussed, followed by a battery of robustness checks and a discussion of the limitations of the results. Section 6 concludes with policy recommendations and suggestions for future research.” I have seen some economists on social media state that they have gotten papers rejected for many reasons, but never for want of a roadmap section. Fair enough. In most cases, however, it is simply easier to include such a roadmap section and delete it at a reviewer’s request than to not have one and have to write one when asked to revise and resubmit a paper, not to mention the fact that some readers will simply expect there to be a roadmap, since the majority of applied economics articles include them. Anything that signals that you know what the unspoken rules and norms of the profession are is a good thing for your article’s chances of getting published.
+
+% Section 1.b (optional): background (not lit review)
+% Section 2: theoretical framework, testable prediction
+% Section 3: empirical framework: estimation strategy, identification strategy
+% Section 4: data, summary stats
+% Section 5: empirical results, discussion, robustness checks, limitations of the results
+% Section 6: policy recommendations, future research
+
+
+The remainder of this article is organized as follows. Section \ref{background} briefly reviews the history of air quality standard in the US and some key details of current regulations. Section \ref{data} then discusses the data used and section \ref{emprical} describes the theoretical and empirical framework that will be applied to estimate the missing pollution and effects on reference levels for national standards. Section \ref{results} reviews the results of the empirical study and concludes.

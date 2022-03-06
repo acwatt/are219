@@ -1,0 +1,184 @@
+The EPA AQS data system used to get the NAAQS monitor PM2.5 hourly readings uses data qualifier flags to describe what readings need to be excluded from calculations. Below are all the ``NULL'' and ``REQEXC'' type qualifiers, representing null/canceled data and requests for exceptional event designation. All data with REQEXC flags were removed from the analysis, and all data with NULL type flags have empty readings in the dataset and were treated as missing for replacement by PurpleAir PM2.5 measurement.
+
+% \begin{longtable}{ll}
+% \caption{Excluded EPA AQS data qualifier flags.}
+% \label{tab:excluded_qualifiers}\\
+% Qualifier Code & Qualifier Description                 \\
+% AA             & Sample Pressure out of Limits.        \\
+% AB             & Technician Unavailable.               \\
+% AC             & Construction/Repairs in Area.         \\
+% AD             & Shelter Storm Damage.                 \\
+% AE             & Shelter Temperature Outside Limits.   \\
+% AF             & Scheduled but not Collected.          \\
+% AG             & Sample Time out of Limits.            \\
+% AH             & Sample Flow Rate or CV out of Limits. \\
+% AI             & Insufficient Data (cannot calculate). \\
+% AJ             & Filter Damage.                        \\
+% AK             & Filter Leak.                          \\
+% AL             & Voided by Operator.                   \\
+% AM             & Miscellaneous Void.                   \\
+% AN             & Machine Malfunction.                  \\
+% AO             & Bad Weather.                          \\
+% AP             & Vandalism.                            \\
+% AQ             & Collection Error.                     \\
+% AR             & Lab Error.                            \\
+% AS             & Poor Quality Assurance Results.       \\
+% AT             & Calibration.                          \\
+% AU             & Monitoring Waived.                    \\
+% AV             & Power Failure.                        \\
+% AW             & Wildlife Damage.                      \\
+% AX             & Precision Check.                      \\
+% AY             & Q C Control Points (zero/span).       \\
+% AZ             & Q C Audit.                            \\
+% BA             & Maintenance/Routine Repairs.          \\
+% BB             & Unable to Reach Site.                 \\
+% BC             & Multi-point Calibration.              \\
+% BD             & Auto Calibration.                     \\
+% BE             & Building/Site Repair.                 \\
+% BF             & Precision/Zero/Span.                  \\
+% BG             & Missing ozone data not likely to exceed level of standard.       \\
+% BH             & Interference/co-elution/misidentification. \\
+% BI             & Lost or damaged in transit.           \\
+% BJ             & Operator Error.                       \\
+% BK             & Site computer/data logger down.       \\
+% BL             & QA Audit.                             \\
+% BM             & Accuracy check.                       \\
+% BN             & Sample Value Exceeds Media Limit.     \\
+% BR             & Sample Value Below Acceptable Range.  \\
+% CS             & Laboratory Calibration Standard.      \\
+% DA             & Aberrant Data (Corrupt Files, Aberrant Chromatography, Spikes, Shifts).      \\
+% DL             & Detection Limit Analyses.             \\
+% EC             & Exceeds Critical Criteria.            \\
+% FI             & Filter Inspection Flag.               \\
+% MB             & Method Blank (Analytical).            \\
+% MC             & Module End Cap Missing.               \\
+% QV             & Quality Control Multi-point Verification.   \\
+% SA             & Storm Approaching.                    \\
+% SC             & Sampler Contamination.                \\
+% ST             & Calibration Verification Standard.    \\
+% SV             & Sample Volume out of limits.          \\
+% TC             & Component Check \& Retention Time Standard.   \\
+% TS             & Holding Time Or Transport Temperature Is Out Of \\
+% XX             & Experimental Data.                    \\
+% 1C             & A 1-Point QC check exceeds acceptance criteria but there is compelling evidence that the analyzer data is valid. \\
+% 1F             & No 1 Point QC but need to count for completeness \\
+% E              & Forest Fire.                          \\
+% RA             & African Dust.                         \\
+% RB             & Asian Dust.                           \\
+% RC             & Chemical Spills \& Industrial Accidents.   \\
+% RD             & Cleanup After a Major Disaster.       \\
+% RE             & Demolition.                           \\
+% RF             & Fire - Canadian.                      \\
+% RG             & Fire - Mexico/Central America.        \\
+% RH             & Fireworks.                            \\
+% RI             & High Pollen Count.                    \\
+% RJ             & High Winds.                           \\
+% RK             & Infrequent Large Gatherings.          \\
+% RL             & Other.                                \\
+% RM             & Prescribed Fire.                      \\
+% RN             & Seismic Activity.                     \\
+% RO             & Stratospheric Ozone Intrusion.        \\
+% RP             & Structural Fire.                      \\
+% RQ             & Terrorist Act.                        \\
+% RR             & Unique Traffic Disruption.            \\
+% RS             & Volcanic Eruptions.                   \\
+% RT             & Wildfire-U. S.                        \\
+% RU             & Wildland Fire Use Fire-U. S.
+% \end{longtable}
+
+
+
+
+
+% Please add the following required packages to your document preamble:
+% \usepackage{longtable}
+% Note: It may be necessary to compile the document several times to get a multi-page table to line up properly
+\begin{longtable}{lll}
+\caption{Null and excluded EPA AQS data qualifier flags.}
+\label{tab:excluded_qualifiers}\\
+Qualifier Code & Qualifier Description & Qualifier Type Code \\
+\endfirsthead
+%
+\endhead
+%
+AA & Sample Pressure out of Limits. & NULL \\
+AB & Technician Unavaliable. & NULL \\
+AC & Construction/Repairs in Area. & NULL \\
+AD & Shelter Storm Damage. & NULL \\
+AE & Shelter Temperature Outside Limits. & NULL \\
+AF & Scheduled but not Collected. & NULL \\
+AG & Sample Time out of Limits. & NULL \\
+AH & Sample Flow Rate or CV out of Limits. & NULL \\
+AI & Insufficient Data (cannot calculate). & NULL \\
+AJ & Filter Damage. & NULL \\
+AK & Filter Leak. & NULL \\
+AL & Voided by Operator. & NULL \\
+AM & Miscellaneous Void. & NULL \\
+AN & Machine Malfunction. & NULL \\
+AO & Bad Weather. & NULL \\
+AP & Vandalism. & NULL \\
+AQ & Collection Error. & NULL \\
+AR & Lab Error. & NULL \\
+AS & Poor Quality Assurance Results. & NULL \\
+AT & Calibration. & NULL \\
+AU & Monitoring Waived. & NULL \\
+AV & Power Failure. & NULL \\
+AW & Wildlife Damage. & NULL \\
+AX & Precision Check. & NULL \\
+AY & Q C Control Points (zero/span). & NULL \\
+AZ & Q C Audit. & NULL \\
+BA & Maintenance/Routine Repairs. & NULL \\
+BB & Unable to Reach Site. & NULL \\
+BC & Multi-point Calibration. & NULL \\
+BD & Auto Calibration. & NULL \\
+BE & Building/Site Repair. & NULL \\
+BF & Precision/Zero/Span. & NULL \\
+BG & Missing ozone data not likely to exceed level of standard. & NULL \\
+BH & Interference/co-elution/misidentification. & NULL \\
+BI & Lost or damaged in transit. & NULL \\
+BJ & Operator Error. & NULL \\
+BK & Site computer/data logger down. & NULL \\
+BL & QA Audit. & NULL \\
+BM & Accuracy check. & NULL \\
+BN & Sample Value Exceeds Media Limit. & NULL \\
+BR & Sample Value Below Acceptable Range. & NULL \\
+CS & Laboratory Calibration Standard. & NULL \\
+DA & \begin{tabular}[c]{@{}l@{}}Aberrant Data (Corrupt Files, Aberrant\\ Chromatography, Spikes, Shifts).\end{tabular} & NULL \\
+DL & Detection Limit Analyses. & NULL \\
+EC & Exceeds Critical Criteria. & NULL \\
+FI & Filter Inspection Flag. & NULL \\
+MB & Method Blank (Analytical). & NULL \\
+MC & Module End Cap Missing. & NULL \\
+QV & Quality Control Multi-point Verification. & NULL \\
+SA & Storm Approaching. & NULL \\
+SC & Sampler Contamination. & NULL \\
+ST & Calibration Verification Standard. & NULL \\
+SV & Sample Volume out of limits. & NULL \\
+TC & Component Check \& Retention Time Standard. & NULL \\
+TS & Holding Time Or Transport Temperature Is Out Of Specs. & NULL \\
+XX & Experimental Data. & NULL \\
+1C & \begin{tabular}[c]{@{}l@{}}A 1-Point QC check exceeds acceptance criteria but there\\ is compelling evidence that the analyzer data is valid.\end{tabular} & NULL QC \\
+1F & No 1 Point QC but need to count for completeness & NULL QC \\
+E & Forest Fire. & REQEXC \\
+RA & African Dust. & REQEXC \\
+RB & Asian Dust. & REQEXC \\
+RC & Chemical Spills \& Industrial Accidents. & REQEXC \\
+RD & Cleanup After a Major Disaster. & REQEXC \\
+RE & Demolition. & REQEXC \\
+RF & Fire - Canadian. & REQEXC \\
+RG & Fire - Mexico/Central America. & REQEXC \\
+RH & Fireworks. & REQEXC \\
+RI & High Pollen Count. & REQEXC \\
+RJ & High Winds. & REQEXC \\
+RK & Infrequent Large Gatherings. & REQEXC \\
+RL & Other. & REQEXC \\
+RM & Prescribed Fire. & REQEXC \\
+RN & Seismic Activity. & REQEXC \\
+RO & Stratospheric Ozone Intrusion. & REQEXC \\
+RP & Structural Fire. & REQEXC \\
+RQ & Terrorist Act. & REQEXC \\
+RR & Unique Traffic Disruption. & REQEXC \\
+RS & Volcanic Eruptions. & REQEXC \\
+RT & Wildfire-U. S. & REQEXC \\
+RU & Wildland Fire Use Fire-U. S. & REQEXC
+\end{longtable}

@@ -80,4 +80,22 @@ How much do prediction errors matter in pollution regulation? Does incorporating
 % \section{Discussion}
 
 % \section{Conclusion}
+
+
+\newpage
+\section{Modeling Missingness in time}
+\twocolumn[
+  \begin{@twocolumnfalse}
+
+EPA pollution monitors can be turned on and off buy the hour and day, but have a constraint on the maximum number of hours per week they can be turned off. Consider the following probit model of missing pollution data
+\[
+D_{h,d,y,c} = \beta_0 + \beta_1 P_{h,d,y,c} 
++ \beta_2 X_{c,y} + \beta_3\delta_h + \beta_4\delta_d +\beta_5\delta_y
+\]
+
+where in hour-day-of-the-week
+  \end{@twocolumnfalse}
+  ]
+
+
 \end{document}
