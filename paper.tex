@@ -1,0 +1,502 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{lipsum}
+\usepackage{titling}
+\usepackage{amsmath}
+\usepackage{bbm}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\doublespacing
+\usepackage{graphicx}
+\usepackage{placeins} % \FloatBarrier
+\usepackage{wrapfig}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{lscape}
+\usepackage{caption}
+\graphicspath{{pics/}}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={Overleaf Example},
+    pdfpagemode=FullScreen,
+    }
+
+\urlstyle{same}
+
+% Let overleaf run longer to compile many pictures
+\maxdeadcycles=200
+
+
+\title{Filling in the Gaps: Using Consumer Products to Replace Missing Pollution Data}
+\author{Aaron Watt}
+\date{February 2022}
+\setlength{\droptitle}{-10em}
+
+% REVIEW COUNT -- goal is 100 by April
+% increase the count each time the intro is reviewed
+% 8
+
+
+% Helpful docs:
+% CONVERSABLE ECONOMIST: Writing the Intro to Your Economics Research Paper (Timothy Taylor)
+% Bellemare, “How to Write Applied Papers in Economics.”
+% McCloskey, Economical Writing.
+
+
+% Task: Submission of your complete paper. Typically a complete paper will include an introduction, a model, an econometric equation, a description of the data, discussion of results, and a conclusion. The paper should be no more than 30 pages using a 12 pt font, 1-inch margins, including tables, graphs and reference, and with the core text double-spaced.
+
+
+\begin{document}
+
+\maketitle
+
+%============================================
+\begin{abstract}
+%============================================
+% Typically, it is possible to write a solid draft of your abstract by keeping only the first sentence of the hook, research question, and value added sections of your introduction, and by polishing up the resulting paragraph some.
+% Except for the requisite terminology (e.g., randomized controlled trial, difference-in-differences, regression discontinuity), your abstract should be intelligible to any smart, college-educated person who is not an economist. This is especially true for an applied economics paper. After all, we are writing about real-world phenomena that are of interest to policy makers or business managers, so your abstract should be intelligible to someone with a master’s degree in public policy or in business administration, depending on what you are doing. Do not make the mistake of confusing lack of intelligibility with intellectual rigor; this is economics, not French postmodern philosophy.
+% If your title is not repellent, and if your abstract is intelligible to people who are not experts in your field and to people in other disciplines, you have just expanded the scope of your citations tenfold, because whether one likes it or not, a lot of people cite stuff they have only read the abstract of.
+
+
+% Research Question
+[abstract here]
+
+% Proposed Model
+
+
+% Dataset
+
+
+% Estimation and testing plan
+
+
+\vspace{2em}
+\end{abstract}
+
+
+
+
+
+% Research Question
+% How much do prediction errors matter in pollution regulation? Does incorporating prediction errors of machine-learning-produced pollution data affect the policy categorization of areas without a pollution monitor?
+
+%==========================================
+\section{Introduction} 
+\label{introduction}
+%==========================================
+\input{1_introduction}
+
+%==========================================
+\section{Background} 
+\label{background}
+%==========================================
+\input{2_background}
+
+
+
+
+
+%===========================================
+\section{Data} \label{data}
+%===========================================
+
+
+\subsection{EPA Regulation-grade Monitors}
+There are currently 388 air quality monitoring stations around the US that are used for NAAQS determination for PM2.5; I will refer to these monitors as \textit{NAAQS monitors}. There are more regulation-grade monitors that meet or approach the regulatory accuracy standards set by the EPA, but these 388 are the monitors that are officially used to calculate the design values that decide NAAQS attainment status. Of the 388 NAAQS monitors in the US, I limit my preliminary analysis on the 15 monitors in California that take hourly readings every day. Future analysis will include the full set of NAAQS monitors, which include monitors that only report daily averages (as opposed to hourly averages) and monitors that only report every 2, 3, 6, or 12 days.
+
+%\citep{fowlie_bringing_2019}
+\textbf{Design Values.} PM2.5 \textit{design values} are statistics of hourly PM2.5 concentrations reported by the NAAQS monitors. In reality, design value determination for a monitor begins by calculating the initial design value on the non-missing data and then includes a negotiation step between EPA and the local regulator to decide the final, publicly-reported design value. I could use final design values for each monitor that are listed in EPA reports. However, I am interested in directly comparing the design values calculated from only reported data to design values that include predictions of unreported data. Because I cannot replicate the final negotiation process, I replicate work done in \citep{fowlieBringingSatelliteBasedAir2019} to create \textit{pseudo design values} by calculating the statistic on the data and making comparisons based on this initial design value. There are two NAAQS design values for PM2.5 explained in Section \ref{design_value_equations}: annual and 24-hour. These design value calculations only use valid daily and annual averages, where validity is determined based on the number of reported and non-excluded observations.
+
+% \cite{epa_event_1990}
+\textbf{Excluded Readings.} There are a number of events that create air quality measurements that cannot be used in NAAQS determination; wildfires or machine calibrations (for example) can cause hour- or day-long readings to be invalid for the purposes of NAAQS determination. These times, referred to as \textit{exceptional events} (EE), are events that are ``not expected to recur routinely at a given location, or that [are] possibly uncontrollable or unrealistic to control through the [NAAQS regulatory] process''\citep{epaEventQualifier1990}. These events are identified in the NAAQS monitor data and removed from the analysis: hours that have been labeled as EE are removed from both the PurpleAir and NAAQS monitor data before calculating design values.\footnote{See Appendix Section \ref{sec:tables} Table \ref{tab:excluded_qualifiers} for a detailed list of reasons that observations are excluded from NAAQS determinations.} These are not considered ``missing'' or ``unreported'' data for the sake of predicting missing values, however these are considered invalid observations in the design value calculation. Removing EE provides more realistic pseudo design value estimates.
+
+\subsection{PurpleAir Consumer Sensors}
+The last ten years have seen a growing interest in consumer-based air quality measurement. PurpleAir air quality sensors are designed to mainly measure PM2.5, but also measure other pollutants (PM10, ozone) and environmental factors (humidity, temperature).\footnote{See Appendix section \ref{sec:monitor_pictures} for pictures of both a NAAQS monitoring station and a typical PurpleAir outdoor pollution sensor}. In my analysis, PurpleAir PM2.5 data plays a ground-truth role -- it gives me an alternative source of PM2.5 measurements to rely on when the NAAQS monitor is shut off. 
+
+To examine how design values might be influenced by missing data, I predict missing PM2.5 hourly average concentrations from EPA NAAQS monitors using nearby PurpleAir PM2.5 sensors. For an initial analysis, I limit the sample to include PurpleAir sensors within 5 miles of each NAAQS monitor, or extending up to 25 miles to get 10 PurpleAir sensors minimum for each monitor.
+
+This is a fairly new and rich dataset: there have been more than 16,000 public PurpleAir sensors brought online in the United States since 2015. When a consumer is setting up their sensor, they have the choice to make the sensor public or private. All sensors upload their PM2.5 readings to an online server, but only public sensors have data available for research use. The company asks consumers to make their data public if possible, attempting to contribute to more citizen science. Of the 16,000+ US sensors, there are 10,401 in California, Oregon, Nevada, and Arizona and I limit my sample to the 592 unique PurpleAir sensors within 5 miles of 15 NAAQS-primary monitors.
+
+\textbf{Correction of PurpleAir Readings.} PurpleAir sensors are known to have worse readings at higher levels of pollution. I modify PurpleAir PM2.5 values using the EPA's correction equation for PurpleAir sensors. The calibrated this equation by studying co-located PurpleAir and NAAQS monitors.
+$$
+\widetilde{PA}_{j,t}=\begin{cases}
+			0.52*PA_{j,t} - 0.086*H_{j,t} + 5.75, & \text{if $PA_{j,t} \leq 343 \mu$g/m$^3$}\\
+            0.46*PA_{j,t} + 0.(3.93e-4)PA_{j,t}^2 + 2.97, & \text{otherwise}
+		 \end{cases}
+$$
+where $PA_{j,t}$ is the ambient PM2.5 measured by PurpleAir sensor $j$ at time $t$ and $H_{j,t}$ is the relative humidity (between 0 and 1) also measured by the PurpleAir device. This correction helps reduce concerns about heteroskedasticity due to larger errors in PurpleAir readings at high levels of PM2.5. Future work involves a more complex predictive model.
+
+
+% Highlights:
+% \begin{itemize}
+% \item Goal: predict missing
+% \item Limited the analysis to include PurpleAir sensors within 5 miles of each NAAQS-primary monitor.
+% \item 16,038 PurpleAir outdoor, publicly-shared PM2.5 sensors in the United States have some accessible data.
+% \item 10,401 sensors in California, Oregon, Nevada, and Arizona.
+% \item 11,205 instances of PurpleAir sensors within 50 miles of the 15 NAAQS-primary monitors (double counting permitted).
+% \item 7,777 unique PurpleAir sensors within 50 miles of 15 NAAQS-primary monitors.
+% \item 592 unique PurpleAir sensors within 5 miles of 15 NAAQS-primary monitors (final sample of PA sensors contributing to estimated EPA monitor values).
+% \item I correct PurpleAir PM2.5 values using EPA's correction equation.
+% \item For each hour that there are valid PurpleAir sensor readings within 5 miles of the EPA monitor, I calculate an inverse-distance weighted average PM2.5 level.
+% \item Future work includes a better PurpleAir prediction for EPA monitor PM2.5 measurements, using wind speed and direction.
+% \item There are some PurpleAir sensors that are biasing the prediction of PM2.5 -- seem to be measuring localized pollution that the EPA monitor does not pick up. These would be down-weighted or removed in the future version of the prediction mentioned above.
+% \item I show plots for an example NAAQS monitor in Los Angeles, CA. Plots for other monitors are in the appendix.
+% \end{itemize}
+
+% \FloatBarrier
+% \begin{figure}[ht]
+% \centering
+% \includegraphics[width=0.8\textwidth]{purple_air_sensor_cum_time_california.png}
+% \caption{(Red) 20-day rolling average of the Air Quality Index in California. (Blue) Cumulative PurpleAir outdoor sensors posting public PM2.5 data.}
+% \label{fig:ca_purpleair_adoption}
+% \end{figure}
+
+\FloatBarrier
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.8\textwidth]{purple_air_sensor_map_california.png}
+\caption{Map of PurpleAir sensors offering public, outdoor PM2.5 measurements. These are sensors that have offered any data in the past, so many are now inactive. The historical data is used in this analysis.}
+\label{fig:ca_purpleair_map}
+\end{figure}
+
+\FloatBarrier
+\textbf{PurpleAir and a NAAQS Monitor.} As an example, figure \ref{fig:concentric_purpleair_037-4004} depicts the high number of PurpleAir sensors in the vacinity of one of Los Angeles's NAAQS monitors. I select the PurpleAir sensors in pink, those within 5 miles of the monitor.
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.8\textwidth]{county-037_site-4004_epa-pa-concentric-ranges.png}
+\caption{Map of an EPA NAAQS-primary monitoring station (red) surrounded by PurpleAir monitors within 5-mile (pink), 10-mile (yellow), and 25-mile (green) radii. This preliminary analysis uses the PurpleAir sensors within 5 miles (pink markers).}
+\label{fig:concentric_purpleair_037-4004}
+\end{figure}
+
+% \FloatBarrier
+% \begin{figure}[ht]
+% \centering
+% \includegraphics[width=0.8\textwidth]{site-037-4004_pa-daily-covereage.png}
+% \caption{Scatter plot indicating the number of hours in each day that this NAAQS-primary monitor has PurpleAir coverage. An hour has PurpleAir coverage if there are any PurpleAir sensor readings within the 5-mile radius of the monitor site for that hour. The weighted average is calculated for that hour using all the available PurpleAir readings within 5 miles.}
+% \label{fig:hourly_coverage_037-4004}
+% \end{figure}
+
+
+\FloatBarrier
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.8\textwidth]{site-037-4004_epa-pa-hourly-plot.png}
+\caption{Scatter plot comparing reported hourly PM2.5 measurements: the x-axis represents the IDW-weighted average of PurpleAir measurements, the y-axis represents reported NAAQS-primary monitor measurements. The red line is a 45$^\circ$ line, representing perfect correlation between the PurpleAir average and the NAAQS-primary monitor. For this site, we can see the PurpleAir average is skewed to the right for readings from 2021. This is likely from a PurpleAir sensor coming online that was placed near a source of localized pollution that is not being picked up by the NAAQS-primary monitor.}
+\label{fig:pa-epa-compare_037-4004}
+\end{figure}
+
+
+\FloatBarrier
+% \subsection{Wind Speed and Direction}
+
+\subsection{Estimating Regulation-grade Readings with PurpleAir Sensors} 
+I use inverse-distance weighting (IDW) with a power of 1 on the denominator. In their discussion of IDW in ambient pollution estimation, \cite{demesnardPollutionModelsInverse2013} derives that a power between 1 and 3 is appropriate for diffuse particle distributions. I use a power of 1 here because I find evidence that some PurpleAir sensors that are very close to the NAAQS monitor are not very good predictors of the monitor's PM2.5 levels. These PurpleAir sensors seem to still have reliable estimates\footnote{Each PurpleAir sensor has two internal sensors that measure PM2.5. Reliability of the PurpleAir sensors is determined by the agreement of the two sensors' hourly averages.}, and anecdotally seem to have very high PM2.5 readings when they disagree with the NAAQS monitor. This suggests they are measuring localized pollution that is out of the range of the NAAQS monitor (these sensors could be located next to a highway, for example).
+
+I plan to fix this issue with a future implementation of a better prediction model\footnote{See Appendix section \ref{sec:app-prediction}}. In this iteration, I have implemented the sub-optimal IDW average to avoid excluding entire PurpleAir sensors and removing potentially useful sensor data.
+
+
+
+
+
+
+
+
+
+%===========================================
+\section{Theoretical \& Empirical Framework} 
+\label{theoretical}
+%===========================================
+
+\subsection{Estimating PM2.5 at the NAAQS Monitor with PurpleAir Sensors}
+\FloatBarrier
+
+To examine the difference between reported pollution and that which is missing from the NAAQS monitors' dataset, I need some measure of ambient PM2.5 levels around the monitor. A good place to start is inverse distance weighting (IDW) to create a weighted average of PurpleAir sensors that can tell us about the PM2.5 levels near the NAAQS monitor.\footnote{This is not a good place to end, however. IDW produces fairly poor estimates of PM2.5 at the location of the NAAQS monitor (before OLS). I plan to implement a more rich prediction model using wind speed and direction -- see the Appendix section \ref{sec:app-prediction} for model and data notes on this method. Ultimately, both satellite and PurpleAir data could be combined with NAAQS monitor data to provide a more accurate depiction of pollution in the US.} To help make the estimation process concrete, I will use a monitor in Los Angeles, CA as an example (see Fig. \ref{fig:idw_diagram} for a visual representation).
+
+\begin{figure}
+  \begin{center}
+    \includegraphics[width=0.48\textwidth]{IDW_diagram}
+  \end{center}
+  \caption{Example distances of two selected PurpleAir sensors near a NAAQS monitor in Los Angeles, CA.}
+  \label{fig:idw_diagram}
+\end{figure}
+
+Consider an EPA NAAQS monitor that measures PM2.5 concentration $EPA_T$ at time $t$. Let $PA_{j,t}$ be PM2.5 concentration as measured by PurpleAir sensor $j$ at time $t$ at a distance $d_j$ from the NAAQS monitor. Assume that there are $J_t$ active PurpleAir sensors in the vicinity of the NAAQS monitor at some time $t$, each with their own PM measurements and distance. Then the Inverse-Distance Weighted average PurpleAir PM reading $PA^{IDW}_{j,t}$ is
+\begin{equation}
+    PA^{IDW}_t= \sum\limits_{j=1}^{J_t} \dfrac{\frac{1}{d_j}\cdot PA_{j,t}}{\sum\limits_j^{J_t}\frac{1}{d_j}}
+    = \sum\limits_{j=1}^{J^t} w_{j,t}\cdot PA_{j,t}
+\end{equation}
+Note here that I am explicitly using the exponent of one on the distance to balance the desire to have closer sensors provide more weight but avoid having extraordinarily large weights on sensors that are relatively close to the monitor. Also note that the number of PurpleAir sensors $J_t$ changes over time as sensors come online and exit. This means the weights of the weighted average need to be calculated separately for each period. This IDW average PurpleAir measurement provides me with a measure of ambient PM2.5 variation in the vicinity of the NAAQS monitor at all the possible times there exists at least one PurpleAir monitor in the area. This helps provide good coverage and make implementing OLS in the next step easier. 
+
+\textbf{OLS Prediction.} Even if the PurpleAir sensors are highly accurate at measuring PM2.5 concentrations at their location, they may still biased as measures of PM2.5 near the NAAQS monitor. For example, someone might put up a PurpleAir sensor on a telephone pole right next to a highway, which might have high average PM compared to where the NAAQS monitor is placed. To help ensure an unbiased approximation of the missing monitor measurements \textit{at the location of the NAAQS monitor}, I use OLS to regress the NAAQS monitor data on the weighted average PurpleAir data.
+
+\begin{equation}
+EPA_t = \beta_0 + \beta_1 PA^{IDW}_t + \varepsilon_t
+\end{equation}
+
+\def\M{\mathcal{M}}\def\N{\mathcal{N}}\def\R{\mathbbm{R}}
+\def\up{\widehat{EPA}^U_t} \def\low{\widehat{EPA}^L_t}
+I then predict missing NAAQS monitor data (out of sample) and combine the predicted PM estimate with the reported readings. Formally, suppose $\M$ is the set of \textbf{missing} times that we do not have a PM record from the NAAQS monitor (i.e., $EPA_t$ does not exist for $t\in\M$). Let $\N$ be the \textbf{non-missing} (reported) times for the NAAQS monitor ($EPA_t\in\R\ \forall t\in\N$). For simplicity, assume that some PurpleAir data are available at all times ($PA^{IDW}_t\in\R_+\ \forall t\in\M\bigcup\N$). Using the PurpleAir data during the missing times, I predict the missing NAAQS data:
+
+\begin{equation}
+\widehat{EPA}_t = \hat\beta_0 + \hat\beta_1 PA^{IDW}_t \quad \forall t\in\M
+\end{equation}
+
+I also estimate the 95\% lower and upper bound on each predicted value; $\low$ and $\up$ to later using in lower and upper bounds on the design value.
+
+\subsection{Estimating Design Values} \label{design_value_equations}
+The NAAQS specify two primary statistics to determine if an area is in or out of attainment. These two statistics are referred to as the Annual and 24-hour Design Values. The annual design value is a 3-year average of annual averages of daily average PM2.5 levels. The 24-hour design value is a 3-year average of the annual 98th percentile of daily averages. There are also considerations about the proportion of allowed missing recordings (75\%). See Appendix Section \ref{sec:design_values} for details on constructing these design values.
+
+\def\dva{\text{DV}_A}\def\dvh{\text{DV}_H}
+\def\dvaa{\widetilde{\text{DV}}_A}\def\dvhh{\widetilde{\text{DV}_H}}
+I first construct design values using the reported NAAQS monitor data. In the style of \cite{fowlieBringingSatelliteBasedAir2019}, I will call these annual and 24-hour \textit{pseudo design values}; $\dva$ and $\dvh$. I do not use the reported design values because there is a more complex negotiation that happens between the EPA and state regulators that can change some of the numbers. In order to compare design values between reported and reported + imputed datasets, I must calculate them on the actual reported PM2.5 readings from the NAAQS monitor.
+
+I then create predicted NAAQS PM values using PurpleAir data as described in the previous section. I replace all missing NAAQS monitor values possible with the predicted values, leaving the original valid NAAQS readings. With this new imputed dataset, I calculate the new imputed design values: $\dvaa$ and $\dvhh$. Subtracting the original design value from the imputed design value gives an estimate of design value bias caused by missing data.
+
+\begin{align}
+    \text{bias}^{miss}(\dva) &\approx \dvaa - \dva\\
+    \text{bias}^{miss}(\dvh) &\approx \dvhh - \dvh
+\end{align}
+
+If this quantity is positive, then there is support that there is under-reporting of pollution via allowed missing data. To gain an understanding of significance of the results, I also propagate the upper and lower bounds of the predicted observations through the design value calculation (similar to \cite{fowlieBringingSatelliteBasedAir2019}, but they were estimating out of sample prediction errors). This provides a 95\% confidence interval -- upper and lower bounds on the imputed design values: $\dvaa^{upper}$,  $\dvaa^{lower}$, $\dvhh^{upper}$, and $\dvhh^{lower}$.
+
+\textbf{NAAQS.} The standards set out in the National Ambient Air Quality Standards give specific thresholds to compare the design values to. Above the thresholds are considered nonattainment. The primary standard for the annual design value is 12 $\mu$g/m$^3$, and has a secondary standard of 12 $\mu$g/m$^3$. The 24-hour standard is 35 $\mu$g/m$^3$.
+
+
+\textbf{Exceptional Events.} As mentioned in section 3, there are many events for which the EPA allows local regulators to exclude their readings from design value calculations. These readings were removed from the dataset before any design value calculations and do not get imputed.
+
+
+
+
+
+
+
+
+
+%==============================================
+\section{Results and Discussion}
+\label{results}
+%==============================================
+I conducted 15 design value tests on 15 different NAAQS monitors. To create the predicted design value for each NAAQS monitor, I regressed the NAAQS monitor PM2.5 readings on the weighted average PurpleAir readings. An example of this regression is below for one of the Los Angeles monitors. I ran regions both with an without a constant, but because I wanted the prediction errors to have mean zero, I chose to use model (2) in the creation of the design value. Note that the $R^2$ value in model (1) is much higher, however $R^2$ values between regressions with constant and those without are no comparable due to the difference in denominators. 
+\input{pics/appendix/tables/epa_OLS_idw_pa_site-037-4004}
+
+The number of observations here are the number of hours between 2016 and 2021 where neither the NAAQS monitor or the weighted average PurpleAir readings were missing. The slope in both models is less than one, indicating that PurpleAir tends to measure higher PM2.5 concentrations. This could be a selection issue -- consumers who choose to buy a PurpleAir monitor and place it outside their house are probably concerned about pollution -- or a measurement difference between the types of devices.
+
+ For all sites, I generated kernel density plots like those in Fig. \ref{fig:missing-density_019-0500}. Only one of the 15 sites I tested had noticeable differences in the PM2.5 distributions for missing and reported hours (see the appendix for all sites' plots). However, the design values are the policy-relevant statistic of those distributions. Looking at the top and bottom figures below however, we can guess that the means and 98th percentile might be similar in the top case, and could plausibly be different in the bottom case.
+
+ 
+\begin{figure}
+\centering
+\includegraphics[width=0.6\textwidth]{site-037-4004_epa-pa-missing-density.png}
+\includegraphics[width=0.6\textwidth]{appendix/site_plots/site-019-0500_epa-pa-missing-density.png}
+\caption{Comparison of estimated kernel densities of PM2.5 concentration for two sets of hours: reported (blue) and missing (red) hourly observations of the NAAQS monitor. Both densities use the hourly PurpleAir PM2.5 concentration estimates for this site, calculated using the IDW average of PurpleAir sensors within 5 miles of the NAAQS monitor location. The top image is for a monitor at a site in LA, and the bottom is at a site in Fresno, CA.}
+\label{fig:missing-density_019-0500}
+\end{figure}
+
+
+
+
+
+\begin{table}[]
+\caption{Design Value Comparison for Fresno, CA. (98\% CI Bounds)}
+\label{tab:fresno_dvs}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}l|lll|lll@{}}
+Year-Quarter & \begin{tabular}[c]{@{}l@{}}Annual DV\\ Difference\end{tabular} & \begin{tabular}[c]{@{}l@{}}Upper \\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Lower\\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Hour DV \\ Difference\end{tabular} & \begin{tabular}[c]{@{}l@{}}Upper \\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Lower \\ Bound\end{tabular} \\ \midrule
+2018-4 & Invalid DV &  &  & Invalid DV &  &  \\
+2019-1 & -0.005 & 0.133 & -0.143 & 0.000 & 0.252 & 0.000 \\
+2019-2 & -0.003 & 0.141 & -0.147 & 0.000 & 0.252 & 0.000 \\
+2019-3 & 0.015 & 0.170 & -0.139 & 0.058 & 2.202 & 0.000 \\
+2019-4 & 0.002 & 0.190 & -0.185 & 0.000 & 1.460 & -0.024 \\
+2020-1 & -0.012 & 0.182 & -0.207 & 0.000 & 0.335 & 0.000 \\
+2020-2 & -0.010 & 0.191 & -0.211 & 0.000 & 0.376 & 0.000 \\
+2020-3 & 0.679 & 0.954 & 0.403 & 8.718 & 11.704 & 8.556 \\
+2020-4 & 0.647 & 1.006 & 0.288 & 5.979 & 8.281 & 5.851 \\
+2021-1 & 0.564 & 1.036 & 0.091 & 3.007 & 4.184 & 2.903 \\
+2021-2 & 0.533 & 1.024 & 0.042 & 3.007 & 4.225 & 2.903 \\
+2021-3 & 0.630 & 1.129 & 0.132 & 7.607 & 10.557 & 7.444
+\end{tabular}%
+}
+\end{table}
+
+Table \ref{tab:fresno_dvs} reports the difference between the pseudo design value (calculated using the reported data) and the imputed design value -- what I believe is an estimate on the design value bias due to low reporting standards. We can see the first row is invalid. This is common in the full results in the Appendix. This occurs because one of the design values have too many invalid days in the quarter (or the 11 quarters before it) the completeness criteria are violated. Examining the Annual design value difference column, the numbers do not seem striking though the lower half do seem to be statistically significant. However, these are not materially significant -- the EPA has rounding conventions (to the ones place) that would make zero effectively within the lower bound since a design value falling below 0.5 would be rounded to 0.
+
+These unremarkable results for the annual design value bias are fairly representative of the batch of 15 sites. When we look at the hour design value results, we can see in 2020 and 2021, there were fairly large and significant differences between the design values. This indicates that having more restrictive data collection standards could have increased Fresno's design value significantly in these quarters. Because OLS was used to impute the missing values, we would expect the hourly imputed values to be unbiased on average. Since we are taking 3-year averages, it seems plausible to believe most bias in the imputation method would average out. These combined with the lower bounds being well above zero suggest there was indeed under-reporting of pollution in Fresno. I cannot say whether or not that it happened intentionally or by mere chance of turning off the monitor at times that would likely have recorded higher pollution.
+
+Is this meaningful for Fresno though? Fresno has had a nonattainment status for many years and is listed on several lists within this literature as having notable pollution measurement issues. So though Fresno's recorded design value would have been higher, they were already well over the 24-hour design threshold of 35 $\mu$g/m$^3$, having pseudo design values in the 50s and 60s in 2020 and 2021.
+
+This is also just one of 15 cases, where the other 14 did not show interesting results. So is this just p-hacking to find the case study that is, by chance, abnormal? In regulation of air pollution, one might be concerned with individual actors or regions trying to get around the regulations. Since the Clean Air Act and the NAAQS are designed to ensure that all American residents can share in a minimum standard, it seems relevant to me to be able to diagnose mismeasurement.
+
+This work is (hopefully) just the beginning of a line of research regarding the distribution of pollution and pollution policies in the US. There is a to-do list in the Appendix.
+
+
+
+
+
+
+
+
+
+
+
+\newpage
+\bibliographystyle{chicago}
+\bibliography{references}
+% Citation command	Output
+% \citet{goossens93}      Goossens et al. (1993)
+% \citep{goossens93}      (Goossens et al., 1993)	
+% 
+% \citet*{goossens93}     Goossens, Mittlebach, and Samarin (1993)
+% \citep*{goossens93}     (Goossens, Mittlebach, and Samarin, 1993)
+%
+% \citeauthor{goossens93}    Goossens et al.
+% \citeauthor*{goossens93}   Goossens, Mittlebach, and Samarin
+
+% \citeyear{goossens93}      1993
+% \citeyearpar{goossens93}  (1993)
+
+% \citealt{goossens93}     Goossens et al. 1993
+% \citealp{goossens93}     Goossens et al., 1993
+% \citetext{priv.\ comm.}	(priv. comm.)
+
+\newpage
+\section{Appendix}
+
+\subsection{Research Project To-do's} \label{sec:todo}
+
+\textbf{Future Work}
+\begin{itemize}
+    \item I have only tested 15 of 388 possible sites. Now that I have written the bulk of the code the manage the data, most of the future work lies in acquiring the rest of the data for the NAAQS monitors and PurpleAir monitors.
+    \item I am in the process of negotiating a data usage agreement with PurpleAir staff to get the entire historical dataset of all US sensors. This is the main bottleneck.
+    \item I have written code to download any arbitrary NAAQS sensor data between two dates. However, some of the NAAQS monitors report on a less frequent basis than hourly, so the analysis code will need to be generalized for other reporting frequencies.
+    \item I have written code to download wind velocity data, but parsing the files to get wind velocity at a particular location and time requires more work. This will be used in my predictive model for missing PM2.5 data at the NAAQS monitor.
+\end{itemize}
+
+\subsection{Improving Prediction of PM2.5 at the NAAQS Monitor Location} \label{sec:app-prediction}
+
+% \begin{itemize}
+%     \item Add short description of the implementation
+%     \item Add description of the NOAA NCEP NARR wind data -- u-v components and extraction needed from layer.
+% \end{itemize}
+
+A more realistic model of predicting pollution at the EPA monitor could be used. Using wind direction (and possibly wind speed), we can intuitively put more weight on PurpleAir sensors that are North of the EPA monitor when the wind is blowing South. This model allows for mroe flexibility in dropping some sensors that may be measuring hyper-local pollution and are not good predictors of the EPA monitor's PM2.5 readings.
+
+\[
+EPA_{i,t} = \gamma_{i,0} + \sum\limits_{j\in J_i}\sum\limits_{k=1}^7\gamma_{i,j,k} 
+PA_{j,t} \cdot Winddir_{i,t,k} + u_{i,t}
+\]
+
+\begin{itemize}
+\item Each EPA monitor $i$ has it's own set of weights for the PA sensors around it.
+\item Analysis is done at the quarter level; suppressing quarter subscript.
+\item $t$ is a unique hour within a given quarter.
+\item EPA monitor $i$ at time $t$ reads PM2.5 pollution $EPA_{i,t}$.
+\item For each EPA monitor $i$, there are $J_i$ Purple Air monitors within a 5-mile radius.
+\item Purple Air monitor $j\in J_i$ at time $t$ reads PM2.5 pollution $PA_{j,t}$.
+\item $Winddir_{i,t,k} $ is a wind direction indicator; 1 if the prevailing wind near station $i$ at time $t$ is in the $k^{th}$ bucket (of 8 buckets).
+\item I will also estimate a version with wind speed interacted in the sum. This could allow for sensors further away to have more predictive power when the winds are strong.
+\item This regression could be run as a LASSO first to determine which of the interactions for each PurpleAir sensor have the most predictive power.
+\end{itemize}
+
+
+
+% \newpage
+% \subsection{Data Cleaning Steps}
+% \input{pics/appendix/tables/data_cleaning_steps}
+
+
+\newpage
+\subsection{Design Values}
+\label{sec:design_values}
+
+Notes about design values:
+\begin{itemize}
+    \item Valid days: a day that has 18 or more valid hours in it.
+    \item Valid quarters: a 3-month period that has at least 67. 68, or 69 valid days in it.
+    \item Valid 3-year period: a 12-quarter period that has 12 valid quarters in it.
+    \item A design value is only valid if its 3-year period is valid.
+    \item All averages below assume there might be some data missing.
+    \item Design values are based on quarters, so each quarter has a rolling average over the last 3 years before.
+\end{itemize}
+
+\textbf{To construct the annual design value for a given quarter:}
+\begin{itemize}
+    \item Construct an average for every day.
+    \item Construct an annual average of daily averages for every previous 12-month period before this quarter.
+    \item Construct the 3-year average of those annual averages. Because some years have a different number of real or valid days in them, you cannot take a simple 3-year average of all available days or hours.
+\end{itemize}
+
+\textbf{To construct the 24-hour design value:}
+\begin{itemize}
+    \item Construct an average for every day.
+    \item Construct a 98th percentile of all daily averages in the 4-quarter period ending in this quarter. To avoid ambiguous design value construction, the EPA provides a lookup table for which $n^{th}$ maximum daily value to take when constructing the 98th percentile.
+    \item Take a 3-year average of the 98th percentiles.
+\end{itemize}
+
+
+\newpage
+\subsection{Tables}
+\label{sec:tables}
+
+\input{pics/appendix/tables/dv_differences}
+
+
+\input{pics/appendix/tables/attainment_counties}
+
+\newpage
+
+% \input{pics/appendix/tables/epa_OLS_idw_pa_site-037-4004}
+\input{pics/appendix/tables/epa_OLS_idw_pa_site-001-0013}
+\input{pics/appendix/tables/epa_OLS_idw_pa_site-019-0500}
+\input{pics/appendix/tables/epa_OLS_idw_pa_site-019-5001}
+\input{pics/appendix/tables/epa_OLS_idw_pa_site-027-0002}
+\input{pics/appendix/tables/epa_OLS_idw_pa_site-029-0018}
+\input{pics/appendix/tables/epa_OLS_idw_pa_site-031-0004}
+\input{pics/appendix/tables/epa_OLS_idw_pa_site-031-1004}
+\input{pics/appendix/tables/epa_OLS_idw_pa_site-039-2010}
+\input{pics/appendix/tables/epa_OLS_idw_pa_site-057-0005}
+\input{pics/appendix/tables/epa_OLS_idw_pa_site-059-0007}
+\input{pics/appendix/tables/epa_OLS_idw_pa_site-067-5003}
+\input{pics/appendix/tables/epa_OLS_idw_pa_site-077-2010}
+\input{pics/appendix/tables/epa_OLS_idw_pa_site-083-0011}
+\input{pics/appendix/tables/epa_OLS_idw_pa_site-103-0007}
+
+\newpage
+\input{pics/appendix/tables/excluded_qualifiers_table}
+
+
+
+
+
+
+\newpage
+\subsection{Pictures of PM2.5 monitors}
+\label{sec:monitor_pictures}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.5\textwidth]{appendix/sensor_pics/air-monitoring-site.jpg}
+\caption{A typical NAAQS-primary grade air quality monitoring station.}
+\label{fig:pic-epa-site}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.5\textwidth]{appendix/sensor_pics/PA_outdoor_monitor.png}
+\caption{One of PurpleAir's two main outdoor air pollution monitors.}
+\label{fig:pic-ps-sensor}
+\end{figure}
+
+\FloatBarrier
+\newpage
+\subsection{Plots for Other California Hourly NAAQS Monitors} \label{app-additional-plots}
+
+
+
+\input{z_appendix_site_plots}
+\end{document}

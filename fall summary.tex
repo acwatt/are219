@@ -1,0 +1,101 @@
+\documentclass[twocolumn, 12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{lipsum}
+\usepackage{titling}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={Overleaf Example},
+    pdfpagemode=FullScreen,
+    }
+
+\urlstyle{same}
+
+\title{When machine learning does you dirty: Robustness to measurement error in environmental economics}
+\author{Aaron Watt}
+\date{October 2021}
+\setlength{\droptitle}{-10em}
+
+% READ THE DISSERTATION THAT MEREDITH SENT CHU YU
+% READ SOL'S GRAD STUDENTS' JOHNATHAN PROCTOR MEASUREMENT ERROR ML WORK
+%     https://www.nber.org/papers/w28045
+% GET PRUPLE AIR HISTORICAL DATA AND KEEP UPDATED VIA AWS FREE INSTANCE UPATING S3 BUCKET
+
+\begin{document}
+\twocolumn[
+  \begin{@twocolumnfalse}
+    \maketitle
+
+    \begin{abstract}
+    % Research Question
+    Spatially-dense machine-learning-predicted data are becoming more available and social scientists and regulators are availing themselves of it. However, these data are being treated as highly accurate and estimates of the measurement error in these predicted data are often excluded from analyses. Are pollution regulation policies and policy analyses sensitive to the inclusion of measurement error?
+    
+    % Proposed Model
+    
+    
+    % Dataset
+    Previous work by \href{https://www.aeaweb.org/articles?id=10.1257/pandp.20191064}{Fowlie, Rubin, and Walker (2019)} on the issue of measurement error in satellite data has explored two spatially dense ($<$1km$^2$ resolution) satellite-derived datasets that have been produced to estimate ground-level PM2.5 pollution. These data offer a feasible option for the EPA to regulate pollution without installing more expensive pollution monitors. Ground-level PM2.5 pollution concentration is estimated using aerosol optical depth (AOD) satellite data and various predictive models -- PM2.5 is not directly measurable (yet) using current satellite instruments.
+    
+    To help estimate measurement errors of these datasets, we can download PurpleAir data using their API.
+    
+    % Estimation and testing plan
+    Adoption of PurpleAir monitors is non-random so I need to develop and estimate a selection model into PurpleAir adoption. PurpleAir monitors are also known to be less accurate and might be systematically biased, so estimating PM2.5 using PurpleAir measurements and the sparse (but highly accurate) EPA monitors will be important.
+    
+    \vspace{2em}
+    \end{abstract}
+  \end{@twocolumnfalse}
+  ]
+
+
+
+%Succinct description of research question; blurb describing a proposed model, dataset, and plan for estimation/testing.
+\section{Research Question}
+How much do prediction errors matter in pollution regulation? Does incorporating prediction errors of machine-learning-produced pollution data affect the policy categorization of areas without a pollution monitor?
+
+\newpage
+\section{Draft Project Outline}
+\begin{enumerate}
+    \item write the code to scrape the purple air data
+    \item apply a selection model to the purple air data (since monitor adoption is non-random)
+    \item write model of prediction errors of dense prediction of a spatially sparse, temporally dense variable using stats literature
+    \item generate descriptive stats for purple air data and estimates of measurement error using EPA monitors as ground truth
+    \item explore machine learning prediction of prediction errors using purple air data and using a leave-out group for validation testing
+    \item produce draft tables of changes in attainment status
+\end{enumerate}
+
+% \section{Introduction}
+
+  
+% % Something about measurement error in environmental economics... robustness-to-measurement-error replication study, focusing on omitted measurement error from scientifically measured data (like temperature, elevation, pollution concentration, satellite approximated surface characteristics, etc).
+
+% \section{Literature Review}
+
+% \section{Methods/Data}
+
+% \section{Results}
+
+% \section{Discussion}
+
+% \section{Conclusion}
+
+
+\newpage
+\section{Modeling Missingness in time}
+\twocolumn[
+  \begin{@twocolumnfalse}
+
+EPA pollution monitors can be turned on and off buy the hour and day, but have a constraint on the maximum number of hours per week they can be turned off. Consider the following probit model of missing pollution data
+\[
+D_{h,d,y,c} = \beta_0 + \beta_1 P_{h,d,y,c} 
++ \beta_2 X_{c,y} + \beta_3\delta_h + \beta_4\delta_d +\beta_5\delta_y
+\]
+
+where in hour-day-of-the-week
+  \end{@twocolumnfalse}
+  ]
+
+
+\end{document}
