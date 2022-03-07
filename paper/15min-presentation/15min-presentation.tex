@@ -193,6 +193,22 @@ EPA_t = \beta_0 + \beta_1 PA^{IDW}_t + \varepsilon_t
 %Design Values for an EPA site
 \begin{frame}
 \frametitle{Calculating Design Values for an EPA Site}
+
+\def\dvp{\text{DV}_p}
+\def\dvpp{\widetilde{\text{DV}}_p}
+
+\textbf{Pseudo Design Values}\\[0.5em]
+$\dvp$ = $p$ design value for quarter, calculated using \textbf{reported} PM2.5 data from EPA monitor, $\forall p \in \{\text{Daily, 24-Hour}\}$
+\\[1em]
+
+\textbf{Imputed Design Values}\\[0.5em]
+$\dvpp$ = $p$ design value for quarter, calculated using \textbf{imputed} PM2.5 data from EPA monitor and PA sensors
+\\[2em]
+\textbf{Bias in Design Values}
+\begin{equation*}
+    \text{bias from missing data in }\dvp \approx \dvpp - \dvp
+\end{equation*}
+
 \end{frame}
 %---------------------------------------------------------
 
@@ -201,6 +217,7 @@ EPA_t = \beta_0 + \beta_1 PA^{IDW}_t + \varepsilon_t
 %Results: Sample EPA Sites
 \begin{frame}
 \frametitle{Results: Sample EPA Sites}
+\includegraphics[width=\textwidth]{}
 \end{frame}
 %---------------------------------------------------------
 
@@ -209,6 +226,27 @@ EPA_t = \beta_0 + \beta_1 PA^{IDW}_t + \varepsilon_t
 %Results: Fresno
 \begin{frame}
 \frametitle{Results: Fresno}
+\begin{table}[]
+\caption{Design Value Comparison for Fresno, CA. (98\% CI Bounds)}
+\label{tab:fresno_dvs}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}l|lll|lll@{}}
+Year-Quarter & \begin{tabular}[c]{@{}l@{}}Annual DV\\ Difference\end{tabular} & \begin{tabular}[c]{@{}l@{}}Upper \\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Lower\\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Hour DV \\ Difference\end{tabular} & \begin{tabular}[c]{@{}l@{}}Upper \\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Lower \\ Bound\end{tabular} \\ \midrule
+2018-4 & Invalid DV &  &  & Invalid DV &  &  \\
+2019-1 & -0.005 & 0.133 & -0.143 & 0.000 & 0.252 & 0.000 \\
+2019-2 & -0.003 & 0.141 & -0.147 & 0.000 & 0.252 & 0.000 \\
+2019-3 & 0.015 & 0.170 & -0.139 & 0.058 & 2.202 & 0.000 \\
+2019-4 & 0.002 & 0.190 & -0.185 & 0.000 & 1.460 & -0.024 \\
+2020-1 & -0.012 & 0.182 & -0.207 & 0.000 & 0.335 & 0.000 \\
+2020-2 & -0.010 & 0.191 & -0.211 & 0.000 & 0.376 & 0.000 \\
+2020-3 & 0.679 & 0.954 & 0.403 & 8.718 & 11.704 & 8.556 \\
+2020-4 & 0.647 & 1.006 & 0.288 & 5.979 & 8.281 & 5.851 \\
+2021-1 & 0.564 & 1.036 & 0.091 & 3.007 & 4.184 & 2.903 \\
+2021-2 & 0.533 & 1.024 & 0.042 & 3.007 & 4.225 & 2.903 \\
+2021-3 & 0.630 & 1.129 & 0.132 & 7.607 & 10.557 & 7.444
+\end{tabular}%
+}
+\end{table}
 \end{frame}
 %---------------------------------------------------------
 
