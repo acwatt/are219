@@ -65,7 +65,7 @@
 
 
 % Research Question
-[abstract here]
+The Clean Air Act (CAA) is one of the largest-scale pollution policies in US history. Through the CAA, the National Ambient Air Quality Standards (NAAQS) provide thresholds for a basic minimum standard of air quality in the US. However, the EPA only requires 75\% completeness of air quality measurements. This minimum standard of completeness provides a plausible mechanism for locations to under-report high pollution to avoid expensive NAAQS penalties, thus biasing the air quality measurements that are compared to the NAAQS. This paper explores this issue of bias from missing data by bringing in new consumer-based outdoor air pollution data to fill in the gaps in reported data. I find that though most tested locations do not have a significant bias in their reported measurements, one of 15 sites tested has a statistically and economically large bias due to missing data that would be reported under a higher completeness standard. While this is a test on a relatively small number of NAAQS sites, this methodology can be employed in future work to examine most or all of US air quality monitors.
 
 % Proposed Model
 
@@ -247,7 +247,7 @@ I then predict missing NAAQS monitor data (out of sample) and combine the predic
 \widehat{EPA}_t = \hat\beta_0 + \hat\beta_1 PA^{IDW}_t \quad \forall t\in\M
 \end{equation}
 
-I also estimate the 95\% lower and upper bound on each predicted value; $\low$ and $\up$ to later using in lower and upper bounds on the design value.
+I also estimate the 95\% lower and upper bound on each predicted value ($\low$ and $\up$) to use later in calculating lower and upper bounds on the design values for each location.
 
 \subsection{Estimating Design Values} \label{design_value_equations}
 The NAAQS specify two primary statistics to determine if an area is in or out of attainment. These two statistics are referred to as the Annual and 24-hour Design Values. The annual design value is a 3-year average of annual averages of daily average PM2.5 levels. The 24-hour design value is a 3-year average of the annual 98th percentile of daily averages. There are also considerations about the proportion of allowed missing recordings (75\%). See Appendix Section \ref{sec:design_values} for details on constructing these design values.
@@ -326,9 +326,9 @@ Year-Quarter & \begin{tabular}[c]{@{}l@{}}Annual DV\\ Difference\end{tabular} & 
 
 Table \ref{tab:fresno_dvs} reports the difference between the pseudo design value (calculated using the reported data) and the imputed design value -- what I believe is an estimate on the design value bias due to low reporting standards. We can see the first row is invalid. This is common in the full results in the Appendix. This occurs because one of the design values have too many invalid days in the quarter (or the 11 quarters before it) the completeness criteria are violated. Examining the Annual design value difference column, the numbers do not seem striking though the lower half do seem to be statistically significant. However, these are not materially significant -- the EPA has rounding conventions (to the ones place) that would make zero effectively within the lower bound since a design value falling below 0.5 would be rounded to 0.
 
-These unremarkable results for the annual design value bias are fairly representative of the batch of 15 sites. When we look at the hour design value results, we can see in 2020 and 2021, there were fairly large and significant differences between the design values. This indicates that having more restrictive data collection standards could have increased Fresno's design value significantly in these quarters. Because OLS was used to impute the missing values, we would expect the hourly imputed values to be unbiased on average. Since we are taking 3-year averages, it seems plausible to believe most bias in the imputation method would average out. These combined with the lower bounds being well above zero suggest there was indeed under-reporting of pollution in Fresno. I cannot say whether or not that it happened intentionally or by mere chance of turning off the monitor at times that would likely have recorded higher pollution.
+These unremarkable results for the annual design value bias (columns 2-4) are fairly representative of the batch of 15 sites. When we look at the hour design value results above (columns 5-7), we can see in 2020 and 2021, there were fairly large and significant differences between the design values. This indicates that having more restrictive data collection standards could have increased Fresno's design value significantly in these quarters. Because OLS was used to impute the missing values, we would expect the hourly imputed values to be unbiased on average. Since we are taking 3-year averages, it seems plausible to believe most bias in the imputation method would average out. These combined with the lower bounds being well above zero suggest there was indeed under-reporting of pollution in Fresno. I cannot say whether or not that it happened intentionally or by mere chance of turning off the monitor at times that would likely have recorded higher pollution.
 
-Is this meaningful for Fresno though? Fresno has had a nonattainment status for many years and is listed on several lists within this literature as having notable pollution measurement issues. So though Fresno's recorded design value would have been higher, they were already well over the 24-hour design threshold of 35 $\mu$g/m$^3$, having pseudo design values in the 50s and 60s in 2020 and 2021.
+Is this meaningful for Fresno though? Fresno has had nonattainment status for many years and is listed on several lists within this literature as having notable pollution measurement issues. So though Fresno's recorded design value would have been higher, they were already well over the 24-hour design threshold of 35 $\mu$g/m$^3$, having pseudo design values in the 50s and 60s in 2020 and 2021.
 
 This is also just one of 15 cases, where the other 14 did not show interesting results. So is this just p-hacking to find the case study that is, by chance, abnormal? In regulation of air pollution, one might be concerned with individual actors or regions trying to get around the regulations. Since the Clean Air Act and the NAAQS are designed to ensure that all American residents can share in a minimum standard, it seems relevant to me to be able to diagnose mismeasurement.
 
@@ -371,10 +371,10 @@ This work is (hopefully) just the beginning of a line of research regarding the 
 
 \textbf{Future Work}
 \begin{itemize}
-    \item I have only tested 15 of 388 possible sites. Now that I have written the bulk of the code the manage the data, most of the future work lies in acquiring the rest of the data for the NAAQS monitors and PurpleAir monitors.
+    \item I have only tested 15 of 388 possible sites. Now that I have written the bulk of the code to manage the data, most of the future work lies in acquiring the rest of the data for the NAAQS monitors and PurpleAir monitors.
     \item I am in the process of negotiating a data usage agreement with PurpleAir staff to get the entire historical dataset of all US sensors. This is the main bottleneck.
-    \item I have written code to download any arbitrary NAAQS sensor data between two dates. However, some of the NAAQS monitors report on a less frequent basis than hourly, so the analysis code will need to be generalized for other reporting frequencies.
-    \item I have written code to download wind velocity data, but parsing the files to get wind velocity at a particular location and time requires more work. This will be used in my predictive model for missing PM2.5 data at the NAAQS monitor.
+    \item Some of the NAAQS monitors report on a less frequent basis than hourly, so the analysis code will need to be generalized for other reporting frequencies.
+    \item I have written code to download wind velocity data, but parsing the files to get wind velocity at a particular location and time requires more work. This will be used in my predictive model for missing PM2.5 data at the NAAQS monitor (see next section).
 \end{itemize}
 
 \subsection{Improving Prediction of PM2.5 at the NAAQS Monitor Location} \label{sec:app-prediction}
