@@ -8,8 +8,11 @@ import datetime as dt
 
 import botocore.exceptions
 import pandas as pd
+import geopandas as gpd
+from shapely.geometry import Point
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
 import seaborn as sns
 import statsmodels.api as sm
 from statsmodels.iolib.summary2 import summary_col
@@ -24,7 +27,9 @@ from botocore.exceptions import ClientError
 from ..utils.config import PATHS, AWS
 
 logger = logging.getLogger(__name__)
-DTYPES = {"county": str, "site": str, "Qualifier Type Code": str}
+DTYPES = {"county_code": str, "county": str, "County Code": str, "State Code": str,
+          "site_number": str, "site": str, "Site Number": str, "Site Num": str,
+          "Qualifier Type Code": str}
 
 
 def make_hourly_avg_plots(df_pa, df_epa, sensor_id):
@@ -688,6 +693,100 @@ def create_sample_dvs(left='epa', right_list=None):
 
 def generate_predictions(df_):
     pass
+
+
+################################################################################
+#                       Presentation Plots
+################################################################################
+def add_latlon_points(df, crs, lat="Latitude", lon="Longitude"):
+    points = [Point(lon, lat) for lon, lat in zip(df[lon], df[lat])]
+    return gpd.GeoDataFrame(df, geometry=points, crs=crs)
+
+
+def plot_us_epa():
+    """Plot all US EPA NAAQS sensors, mark my sample"""
+    # Plot US shape
+    p1 = PATHS.data.gis / 'cb_2018_us_state_5m' / 'cb_2018_us_state_5m.shp'
+    gdf = gpd.read_file(p1)
+    states_to_drop = ['02', '15']  # remove alaska and hawaii
+    mask = "STATEFP < '60'"  # remove all non-states
+    gdf = gdf[~gdf.STATEFP.isin(states_to_drop)].query(mask)
+    fig = plt.figure()
+    ax = gdf.plot(color='grey', figsize=(15, 8), antialiased=False)
+
+    # Plot all EPA NAAQS monitors in black
+    p2 = PATHS.data.epa_monitors / 'aqs_monitors.csv'
+    df1 = pd.read_csv(p2, dtype=DTYPES)
+    df1 = df1.query("`NAAQS Primary Monitor` == 'Y' and `Parameter Code` == 88101")
+    df1 = df1.query("`Last Sample Date` > '2017-01-01' and `First Year of Data` < 2018")
+    df1 = df1.drop_duplicates(['State Code', 'County Code', 'Site Number'])
+    # 853 unique monitoring sites after this
+    gdf_epa_primary = add_latlon_points(df1, gdf.crs)
+    gdf_epa_primary.plot(ax=ax, color='black', markersize=11)
+
+    #### Ended up not using these hourly points because all NAAQS primary monitors
+    #### are labeled as hourly and report the daily average of their hourly measurements
+    #### but not all NAAQS monitors report each hourly measurement to the AQS server,
+    #### they only report the daily average of the hourly measurements. So all monitors
+    #### are labeled as 1 HOUR, but fewer actualy have hourly AQS measurements
+    #### which I only found after downloading the measurements from AQS and counting
+    #### up all the measurements -- something I don't have time to do right now for
+    #### the whole US.
+    # Plot all hourly monitors in black
+    # Create indicator for hourly monitors
+    # Combine daily summaries tables that have "1 HOUR" samply duration indicator
+    # csvs = ['2016', '2017', '2018', '2019']
+    # dir_ = str(PATHS.data.epa_monitors / 'summary_data' / '88101')
+    # dfs = [pd.read_csv(dir_ + f"/daily_88101_{year}.csv") for year in csvs]
+    # keep_cols = ['State Code', 'County Code', 'Site Num', 'Parameter Code', 'Sample Duration']
+    # df_merge = pd.concat(dfs, ignore_index=True)
+    # df_merge = (df_merge
+    #             .query("`Parameter Code` == 88101 and `Sample Duration` == '1 HOUR'")
+    #             .drop_duplicates(keep_cols + ['Date Local']))
+    # df_merge.hist('Observation Count', bins=df_merge['Observation Count'].max()-1)
+    # df_temp = df_merge.query("`Observation Count` > 24")
+    # df_merge = (df_merge[keep_cols]
+    #             .query("`Parameter Code` == 88101 and `Sample Duration` == '1 HOUR'")
+    #             .drop_duplicates()
+    #             .rename(columns={'Site Num': 'Site Number'})
+    #             .assign(hourly=1)[['State Code', 'County Code', 'Site Number', 'hourly']])
+    # # Merge hourly measurement indicator
+    # gdf_epa_hourly = (gdf_epa_primary
+    #                   .merge(df_merge,
+    #                          how='left',
+    #                          on=['State Code', 'County Code', 'Site Number']))
+    # gdf_epa_hourly.plot(ax=ax, color='black', markersize=11)
+
+    # Plot selected EPA NAAQS monitors in red
+    p3 = PATHS.data.epa_monitors / 'aqs_monitors_88101_hourly-ca-monitors.csv'
+    df3 = pd.read_csv(p3, dtype=DTYPES)
+    df3 = (df3
+           .assign(state="06", in_sample=1)
+           .rename(columns={'site_number': 'Site Number',
+                            'county_code': 'County Code',
+                            'state': "State Code"}))
+    gdf_epa_sample = (gdf_epa_primary
+                      .merge(df3,
+                             how='left',
+                             on=['State Code', 'County Code', 'Site Number']))
+    gdf_epa_sample.query("in_sample == 1").plot(ax=ax, color='red', markersize=12)
+
+    plt.xlim([-124.8, -66.9])
+    plt.ylim([24.5, 49.4])
+    plt.tight_layout()
+    p_fig = PATHS.output / 'figures' / 'epa' / f'all_us_and_15_epa_monitors.png'
+    plt.savefig(p_fig, dpi=200)
+    plt.close(fig)
+    
+
+def plot_california_pa():
+    """Save plot of all CA PA """
+    pass
+
+
+def generate_presentation_plots():
+    plot_us_epa()
+    plot_california_pa()
 
 
 ################################################################################
