@@ -22,6 +22,7 @@ import time
 import os
 import io
 # Third-party Imports
+import altair as alt
 import boto3
 from botocore.exceptions import ClientError
 # Local Imports
@@ -625,28 +626,57 @@ def annual_data(df_daily: pd.DataFrame, pm_type: str):
     return pd.concat(df_list, ignore_index=True)
 
 
+def save_hourly_completeness(df: pd.DataFrame, site_dict):
+    # Hour Stats
+    total = len(df)
+    d = {'type': 'hour',
+         'total': total,
+         'complete': df['pm2.5_epa'].notna().sum(),
+         'complete_p': df['pm2.5_epa'].notna().sum() / total,
+         'complete_after': df['pm2.5_epa.olsyc.pa'].notna().sum(),
+         'complete_after_p': df['pm2.5_epa.olsyc.pa'].notna().sum() / total}
+    d.update({'filled': d['complete_after'] - d['complete']})
+    d.update(site_dict)
+    return d
+
+
+def save_daily_completeness(df, site_dict):
+    # Daily Stats
+    total = len(df)
+    d = {'type': 'daily',
+         'total': total,
+         'complete': df['epa_valid_daily'].sum(),
+         'complete_p': df['epa_valid_daily'].sum() / total,
+         'complete_after': df['epa.olsyc.pa_valid_daily'].sum(),
+         'complete_after_p': df['epa.olsyc.pa_valid_daily'].sum() / total}
+    d.update({'filled': d['complete_after'] - d['complete']})
+    d.update(site_dict)
+    return d
+
+
 def create_site_dvs(site_dict):
+    completeness_list = []
     # Load combined site data
     df = load_combined(site_dict)
     # Create qualifier / exceptional event indicator
     df = add_exceptional_indicator(df)
-    # Create Summary Statistics
-
     # Drop Exceptional Hours
     df = df.query("drop_qualifier == False")
     # Make new combined EPA-PA column with IDW avereage PA data
     df = fill_in_missing_with_idw(df)
     # Make new combined EPA-PA column with OLS prediction from IDW PA data
     df = fill_in_missing_with_OLS(df, site_dict)
+    completeness_list.append(save_hourly_completeness(df.copy(deep=True), site_dict))
     # Make Daily dataset (with indicators for valid > 75% complete)
     df_daily = daily_data(df)
+    completeness_list.append(save_daily_completeness(df_daily.copy(deep=True), site_dict))
     # Calculate DVs for all quarters
     df_list = []
     for pm_type in ['epa', 'pa', 'epa.idw.pa', 'epa.olsnc.pa', 'epa.olsyc.pa', 'epa.olsyc.pa.lower', 'epa.olsyc.pa.upper']:
         df_list.append(annual_data(df_daily, pm_type))
     df_dv = pd.concat(df_list, ignore_index=True)
     df_dv['county'] = site_dict['county']; df_dv['site'] = site_dict['site']
-    return df_dv
+    return df_dv, completeness_list
 
 
 def generate_differences(df, left, right_list):
@@ -672,13 +702,14 @@ def create_sample_dvs(left='epa', right_list=None):
         right_list = ['epa.idw.pa', 'epa.olsnc.pa', 'epa.olsyc.pa', 'epa.olsyc.pa.upper', 'epa.olsyc.pa.lower']  #
     # Load the county-site pairs
     aqs_tbl = load_15_sites()
-    diffs_list, dv_list = [], []
+    diffs_list, dv_list, complete_list = [], [], []
     # For each EPA site-county in list
     for county, site in aqs_tbl:  # cs_list
         site_dict = {'county': county, 'site': site}
-        df = create_site_dvs(site_dict)
+        df, completeness_list = create_site_dvs(site_dict)
         diffs_list.append(generate_differences(df, left=left, right_list=right_list))
         dv_list.append(df)
+        complete_list += completeness_list
     df_dv = pd.concat(dv_list, ignore_index=True)
     df_dv.to_csv(PATHS.data.temp / 'design_value_est.csv', index=False)
     df_save = pd.concat(diffs_list, ignore_index=True)
@@ -689,7 +720,8 @@ def create_sample_dvs(left='epa', right_list=None):
     agg_dict.update({'invalid quarter DV due to too many missing days': ['mean', 'size']})
     df_stats = df_save.groupby(['county', 'site']).agg(agg_dict)
     df_stats.reset_index().to_csv(PATHS.data.temp / 'design_value_site-stats.csv', index=False)
-    print()
+    df_complete = pd.DataFrame(complete_list)
+    df_complete.to_csv(PATHS.data.temp / 'completeness_stats.csv')
 
 
 def generate_predictions(df_):
@@ -856,11 +888,114 @@ def plot_california_pa(min_pa_sensors=5, dist_threshold=5):
     plt.savefig(p_fig, dpi=200)
 
 
+def _testable_quarters(x: pd.Series):
+    """NAAQS design value daily average validity criterion."""
+    return x.notnull.sum()
+
+
+def table_all_tested_sites():
+    p = PATHS.data.temp / 'design_value_differences.csv'
+    df = pd.read_csv(p, dtype=DTYPES)
+    df['Site'] = df['county'] + "-" + df['site']
+    df2 = df.annual_epa.notnull().groupby([df['Site']]).sum().astype(int).reset_index(name='Testable Quarters')
+    agg_dict = {"annual_epa": ['mean', 'count', valid_daily]}
+    df = (df.groupby('Site').agg({}))
+
+
+def plot_all_tested_sites(dv_type='annual'):
+    p = PATHS.data.temp / 'design_value_differences.csv'
+    df = pd.read_csv(p, dtype=DTYPES)
+    df['Site'] = df['county'] + "-" + df['site']
+    # df = df[~df['annual_dv_diff_epa.olsyc.pa'].isna()]
+    plt.figure(figsize=(10, 6))
+    temp = df.query("Site == '037-4004'")
+    plt.plot(temp['year_quarter'], temp[f'{dv_type}_dv_diff_epa.olsyc.pa'], 'o-', label='037-4004')
+    plt.fill_between(temp['year_quarter'], temp[f'{dv_type}_dv_diff_epa.olsyc.pa.lower'],
+                     temp[f'{dv_type}_dv_diff_epa.olsyc.pa.upper'], alpha=0.2)
+    for key, group in df.groupby("Site"):
+        type(key)
+        if key == '037-4004':
+            continue
+        else:
+            plt.plot(group['year_quarter'], group[f'{dv_type}_dv_diff_epa.olsyc.pa'], 'o-', label=key)
+            plt.fill_between(group['year_quarter'], group[f'{dv_type}_dv_diff_epa.olsyc.pa.lower'], group[f'{dv_type}_dv_diff_epa.olsyc.pa.upper'], alpha=0.2)
+    # Aesthetics
+    plt.xlim([df.year_quarter.min(), df.year_quarter.max()])
+    plt.xlabel('Year-Quarter')
+    plt.ylabel(f'Bias in {dv_type} Design Value')
+    plt.tight_layout()
+    plt.legend(fontsize=10, frameon=True, facecolor='white', loc='upper left',
+               ncol=3, title='EPA Site')
+    p_fig = PATHS.output / 'figures' / 'final_results' / f'DV_{dv_type}_plot_all_test_sites.png'
+    plt.savefig(p_fig, dpi=200)
+
+
+def plot_site_dv(dv_type='annual', site='037-4004'):
+    p = PATHS.data.temp / 'design_value_differences.csv'
+    df = pd.read_csv(p, dtype=DTYPES)
+    df['Site'] = df['county'] + "-" + df['site']
+    plt.figure(figsize=(10, 6))
+    temp = df.query(f"Site == '{site}'")
+    zeros = [0]*len(temp['year_quarter'])
+    plt.plot(temp['year_quarter'], zeros, 'k-', linewidth=2)
+    plt.plot(temp['year_quarter'], temp[f'{dv_type}_dv_diff_epa.olsyc.pa'], 'o-', label=site)
+    plt.fill_between(temp['year_quarter'], temp[f'{dv_type}_dv_diff_epa.olsyc.pa.lower'],
+                     temp[f'{dv_type}_dv_diff_epa.olsyc.pa.upper'], alpha=0.2)
+    # Aesthetics
+    plt.xlim([df.year_quarter.min(), df.year_quarter.max()])
+    plt.xlabel('Year-Quarter')
+    plt.ylabel(f'Bias in {dv_type} Design Value')
+    plt.tight_layout()
+    plt.legend(fontsize=10, frameon=True, facecolor='white', loc='upper left',
+               ncol=3, title='EPA Site')
+    p_fig = PATHS.output / 'figures' / 'final_results' / f'DV_{dv_type}_plot_site_{site}.png'
+    plt.savefig(p_fig, dpi=200)
+
+
+def plot_epa_completeness():
+    # Load EPA hourly measurements
+    p = PATHS.data.temp / 'completeness_stats.csv'
+    df = pd.read_csv(p, dtype=DTYPES)
+    df['added_p'] = df.complete_after_p - df.complete_p
+    df['Site'] = df['county'] + "-" + df['site']
+    df2 = df[['Site', 'type', 'complete_p', 'added_p']]
+    df2 = df2.rename(columns={'complete_p': 'p_EPA only', 'added_p': 'p_EPA + PA'})
+    df2 = pd.wide_to_long(df2, ["p_"], i=['Site', 'type'], j="perc_type", suffix='\D+').reset_index()
+
+    chart = (alt.Chart(df2).mark_bar(clip=True).encode(
+        # tell Altair which field to group columns on
+        x=alt.X('type:N', title=None),
+        # tell Altair which field to use as Y values and how to calculate
+        y=alt.Y('sum(p_):Q',
+                scale=alt.Scale(domain=(0.8, 1)),
+                axis=alt.Axis(
+                    grid=False,
+                    title='Percent Complete',
+                    format='%')),
+        # tell Altair which field to use to use as the set of columns to be  represented in each group
+        column=alt.Column('Site:N', title="EPA Monitor Site Data Completeness"),
+        # tell Altair which field to use for color segmentation
+        color=alt.Color('perc_type:N',
+                        scale=alt.Scale(
+                            # make it look pretty with an enjoyable color pallet
+                            range=['#96ceb4', '#ffcc5c'],
+                        ),
+                        legend=alt.Legend(title="Data Type")
+                        ))
+             .configure_view(strokeOpacity=0)  # remove grid lines around column clusters
+             )
+    chart.save(PATHS.output / 'figures' / 'epa_vs_pa' / 'completeness' / f'completeness_epa_pa.png', scale_factor=4.0)
+
 
 def generate_presentation_plots():
     # plot_us_epa()
     # plot_ca_epa()
-    plot_california_pa()
+    # plot_california_pa()
+    # for dv_type in ['annual', 'hour']:
+    #     plot_all_tested_sites(dv_type=dv_type)
+    #     plot_site_dv(dv_type=dv_type, site='019-0500')
+    plot_epa_completeness()
+    pass
 
 
 ################################################################################
