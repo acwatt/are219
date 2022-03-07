@@ -10,6 +10,7 @@ import botocore.exceptions
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
+from shapely import wkt
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -703,6 +704,38 @@ def add_latlon_points(df, crs, lat="Latitude", lon="Longitude"):
     return gpd.GeoDataFrame(df, geometry=points, crs=crs)
 
 
+def load_ca_pa_locations():
+    # Load county shapefile to get CRS for purpleair locations
+    p_shp = PATHS.data.gis / 'cb_2018_us_county_500k' / 'cb_2018_us_county_500k.shp'
+    gdf = gpd.read_file(p_shp)
+    p_pa = PATHS.data.temp / 'sensors_filtered.csv'
+    cols = ['sensor_index', 'date_created', 'lat', 'lon', 'STUSPS', 'geometry']
+    df = pd.read_csv(p_pa, usecols=cols)
+    df['geometry'] = df['geometry'].apply(wkt.loads)
+    gdf = gpd.GeoDataFrame(df, crs=gdf.crs)
+    gdf = gdf.rename(columns={'lat': 'latitude', 'lon': 'longitude', 'STUSPS': 'state'})
+    gdf = gdf.query("state in ['CA']")
+    return gdf
+
+
+def load_ca_pa_insample(min_pa_sensors=5, dist_threshold=5):
+    df = pd.read_csv(PATHS.data.tables / 'epa_pa_lookups' / f'aqs_monitors_to_pa_sensors.csv', dtype=DTYPES)
+    df = df.sort_values(['county', 'site', 'dist_mile'])
+
+    df['in_sample'] = "Other PA Sensors"
+
+    def set_sample(df_):
+        df_ = df_.reset_index(drop=True)
+        if len(df_.query(f'dist_mile < {dist_threshold}')) > min_pa_sensors:
+            df_['in_sample'].iloc[df_['dist_mile'] < dist_threshold] = "In Radius"
+        else:
+            df_.iloc[:min_pa_sensors]['in_sample'] = "In Radius"
+        return df_
+
+    df = df.groupby(['county', 'site']).apply(set_sample).reset_index(drop=True)
+    return df
+
+
 def plot_us_epa():
     """Plot all US EPA NAAQS sensors, mark my sample"""
     # Plot US shape
@@ -741,7 +774,6 @@ def plot_us_epa():
     plt.xlim([-124.8, -66.9])
     plt.ylim([24.5, 49.4])
     plt.tight_layout()
-    plt.legend(fontsize=17, frameon=True, facecolor='white')
     p_fig = PATHS.output / 'figures' / 'epa' / f'all_us_and_15_epa_monitors.png'
     plt.savefig(p_fig, dpi=200)
     plt.close(fig)
@@ -788,20 +820,46 @@ def plot_ca_epa():
     plt.xlim([xmin - buffer, xmax + buffer])
     plt.ylim([ymin - buffer, ymax + buffer])
     plt.tight_layout()
-    plt.legend(fontsize=17, frameon=True, facecolor='white')
-    plt.show()
+    plt.legend(fontsize=17, frameon=True, facecolor='white', loc='lower left')
     p_fig = PATHS.output / 'figures' / 'epa' / f'all_ca_and_15_epa_monitors.png'
     plt.savefig(p_fig, dpi=200)
 
 
-def plot_california_pa():
+def plot_california_pa(min_pa_sensors=5, dist_threshold=5):
     """Save plot of all CA PA """
-    pass
+    # Load cali shape
+    p1 = PATHS.data.gis / 'cb_2018_us_state_5m' / 'cb_2018_us_state_5m.shp'
+    gdf = gpd.read_file(p1)
+    gdf = gdf.query("STATEFP == '06'")  # keep only CA
+    ax = gdf.plot(color='grey', figsize=(8, 8), edgecolor="face", linewidth=0.4)
+
+    # Load all PA and filter to CA
+    gdf_pa = load_ca_pa_locations()
+    # Load PA in ranges
+    df_sample = load_ca_pa_insample(min_pa_sensors=5, dist_threshold=5)
+    gdf_pa = gdf_pa.merge(df_sample, on=['sensor_index'], how='left')
+
+    gdf_pa["in_sample"].iloc[gdf_pa["in_sample"] != "In Radius"] = "Other PA Monitors"
+    colors = {"In Radius": 'pink', "Other PA Monitors": 'blue'}
+    zorders = {"In Radius": 10, "Other PA Monitors": 5}
+    # gdf_epa_sample.plot(ax=ax, label="In Sample", color=colors[key], markersize=16, legend=True)
+    for key, group in gdf_pa.sort_values('in_sample', ascending=False).groupby("in_sample"):
+        print(key, colors[key])
+        group.plot(ax=ax, label=key, color=colors[key], legend=True, zorder=zorders[key])
+    [xmin, ymin, xmax, ymax] = gdf.bounds.values[0]
+    buffer = 0.1
+    plt.xlim([xmin - buffer, xmax + buffer])
+    plt.ylim([ymin - buffer, ymax + buffer])
+    plt.tight_layout()
+    plt.legend(fontsize=17, frameon=True, facecolor='white', loc='lower left')
+    p_fig = PATHS.output / 'figures' / 'pa' / f'all_ca_and_15_pa_monitors.png'
+    plt.savefig(p_fig, dpi=200)
+
 
 
 def generate_presentation_plots():
-    plot_us_epa()
-    plot_ca_epa()
+    # plot_us_epa()
+    # plot_ca_epa()
     plot_california_pa()
 
 
