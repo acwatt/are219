@@ -724,39 +724,6 @@ def plot_us_epa():
     gdf_epa_primary = add_latlon_points(df1, gdf.crs)
     gdf_epa_primary.plot(ax=ax, color='black', markersize=11)
 
-    #### Ended up not using these hourly points because all NAAQS primary monitors
-    #### are labeled as hourly and report the daily average of their hourly measurements
-    #### but not all NAAQS monitors report each hourly measurement to the AQS server,
-    #### they only report the daily average of the hourly measurements. So all monitors
-    #### are labeled as 1 HOUR, but fewer actualy have hourly AQS measurements
-    #### which I only found after downloading the measurements from AQS and counting
-    #### up all the measurements -- something I don't have time to do right now for
-    #### the whole US.
-    # Plot all hourly monitors in black
-    # Create indicator for hourly monitors
-    # Combine daily summaries tables that have "1 HOUR" samply duration indicator
-    # csvs = ['2016', '2017', '2018', '2019']
-    # dir_ = str(PATHS.data.epa_monitors / 'summary_data' / '88101')
-    # dfs = [pd.read_csv(dir_ + f"/daily_88101_{year}.csv") for year in csvs]
-    # keep_cols = ['State Code', 'County Code', 'Site Num', 'Parameter Code', 'Sample Duration']
-    # df_merge = pd.concat(dfs, ignore_index=True)
-    # df_merge = (df_merge
-    #             .query("`Parameter Code` == 88101 and `Sample Duration` == '1 HOUR'")
-    #             .drop_duplicates(keep_cols + ['Date Local']))
-    # df_merge.hist('Observation Count', bins=df_merge['Observation Count'].max()-1)
-    # df_temp = df_merge.query("`Observation Count` > 24")
-    # df_merge = (df_merge[keep_cols]
-    #             .query("`Parameter Code` == 88101 and `Sample Duration` == '1 HOUR'")
-    #             .drop_duplicates()
-    #             .rename(columns={'Site Num': 'Site Number'})
-    #             .assign(hourly=1)[['State Code', 'County Code', 'Site Number', 'hourly']])
-    # # Merge hourly measurement indicator
-    # gdf_epa_hourly = (gdf_epa_primary
-    #                   .merge(df_merge,
-    #                          how='left',
-    #                          on=['State Code', 'County Code', 'Site Number']))
-    # gdf_epa_hourly.plot(ax=ax, color='black', markersize=11)
-
     # Plot selected EPA NAAQS monitors in red
     p3 = PATHS.data.epa_monitors / 'aqs_monitors_88101_hourly-ca-monitors.csv'
     df3 = pd.read_csv(p3, dtype=DTYPES)
