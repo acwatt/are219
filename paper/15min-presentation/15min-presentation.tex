@@ -1,8 +1,10 @@
 \documentclass{beamer}
 \usepackage[utf8]{inputenc}
+\setbeamertemplate{navigation symbols}{}
 
 \usetheme{Madrid}
 \usecolortheme{default}
+
 
 %------------------------------------------------------------
 %This block of code defines the information to appear in the
@@ -52,26 +54,34 @@
 %This block of code is for the table of contents after
 %the title page
 \begin{frame}
-\frametitle{Table of Contents}
-\tableofcontents
+\frametitle{Motivation}
+\textbf{Clean Air} 
+
+\begin{itemize}
+    \item The Clean Air Act (1970) established National Ambient Air Quality Standards
+    (NAAQS) for US counties
+    \item Either "attainment" or "non-attainment", penalties/forced adoption
+    \item Minimum requirement of 75\% of readings, per quarter
+    \item Air quality can change quickly
+    \item Monitor shutoffs are common
+\end{itemize}
+\vspace{2em}
+\textbf{Research Questions}
+\begin{itemize}
+\item How biased are EPA monitor-based measures of local air quality?
+\item Does this bias significantly change NAAQS attainment status?
+\end{itemize}
+
 \end{frame}
 %---------------------------------------------------------
 
 
-\section{First section}
 
 %---------------------------------------------------------
-%Changing visivility of the text
 \begin{frame}
-\frametitle{Sample frame title}
-This is a text in second frame. For the sake of showing an example.
+\frametitle{EPA National Ambient Air Quality Standards Monitors}
 
-\begin{itemize}
-    \item<1-> Text visible on slide 1
-    \item<2-> Text visible on slide 2
-    \item<3> Text visible on slides 3
-    \item<4-> Text visible on slide 4
-\end{itemize}
+\includegraphics[width=\textwidth]{output/figures/epa/combined_uc_cali_epa.png}
 \end{frame}
 
 %---------------------------------------------------------
@@ -80,20 +90,152 @@ This is a text in second frame. For the sake of showing an example.
 %---------------------------------------------------------
 %Example of the \pause command
 \begin{frame}
+\frametitle{National Ambient Air Quality Standards for PM2.5}
+Two standards for assessing compliance for ambient PM2.5 concentrations at the location of a monitor:
+\vspace{2em}
+
+\textbf{Daily Design Value} (average)
+\begin{itemize}
+    \item[$\Rightarrow$] 3-year rolling average of 1-year average of daily averages
+    \item[$\Rightarrow$] standard currently set at 15.0 $\mu$g/m$^3$
+\end{itemize}
+\vspace{1em}
+
+\textbf{24-Hour Design Value} (98$^{th}$ percentile)
+\begin{itemize}
+    \item[$\Rightarrow$] 3-year rolling average of 1-year 98$^{th}$ percentile of daily averages
+    \item[$\Rightarrow$] standard currently set at 35 $\mu$g/m$^3$
+\end{itemize}
+\end{frame}
+%---------------------------------------------------------
+
+
+%---------------------------------------------------------
+%Highlighting text
+\begin{frame}
+\frametitle{NAAQS Completeness Criteria for daily monitors}
+
+\textbf{Valid day:}
+minimum of 75\% hours reported  (18 hours)
+
+\vspace{2em}
+\textbf{Valid quarter:}
+minimum of 75\% valid days  (22-23 days\footnote{fewer for monitors that report less frequent observations})
+
+\vspace{2em}
+\textbf{Valid quarterly design value:}
+all 12 quarters in 3-year period (12 quarters)
+
+\end{frame}
+%---------------------------------------------------------
+
+
+%---------------------------------------------------------
+%Observed EPA Completeness
+\begin{frame}
+\frametitle{Observed Completeness of NAAQS Monitors in sample}
+\includegraphics[width=0.8\textwidth]{example-image-a}
+\end{frame}
+%---------------------------------------------------------
+
+
+%---------------------------------------------------------
+%Purple Air Outdoor Monitors
+\begin{frame}
+\frametitle{Purple Air Outdoor Monitors}
+\includegraphics[width=0.48\textwidth]{output/figures/pa/all_ca_and_15_pa_monitors.png}
+\includegraphics[width=0.48]{0500}
+\end{frame}
+%---------------------------------------------------------
+
+
+%---------------------------------------------------------
+%Alternate measure of ambient air quality
+\begin{frame}
+\frametitle{Alternate measure of ambient air quality}
+\end{frame}
+%---------------------------------------------------------
+
+
+%---------------------------------------------------------
+%Predicting Missing EPA Data
+\begin{frame}
+\frametitle{Predicting Missing EPA Data}
+\end{frame}
+%---------------------------------------------------------
+
+
+%---------------------------------------------------------
+%Design Values for an EPA site
+\begin{frame}
+\frametitle{Calculating Design Values for an EPA Site}
+\end{frame}
+%---------------------------------------------------------
+
+
+%---------------------------------------------------------
+%Results: Sample EPA Sites
+\begin{frame}
+\frametitle{Results: Sample EPA Sites}
+\end{frame}
+%---------------------------------------------------------
+
+
+%---------------------------------------------------------
+%Results: Fresno
+\begin{frame}
+\frametitle{Results: Fresno}
+\end{frame}
+%---------------------------------------------------------
+
+
+%---------------------------------------------------------
+%Conclusions & Discussion
+\begin{frame}
+\frametitle{Conclusions \& Discussion}
+\end{frame}
+%---------------------------------------------------------
+
+
+%---------------------------------------------------------
+%Future Work
+\begin{frame}
+\frametitle{Future Work}
+\end{frame}
+%---------------------------------------------------------
+
+
+%---------------------------------------------------------
+%Extra Tables
+\begin{frame}
+\frametitle{Table: }
+\end{frame}
+%---------------------------------------------------------
+
+
+\end{document}
+
+
+
+
+%    Examples
+
+%%%%%%%%%%%%%%%%%% multi-slide text
+\begin{frame}
 In this slide \pause
 
 the text will be partially visible \pause
 
 And finally everything will be there
 \end{frame}
-%---------------------------------------------------------
 
-\section{Second section}
 
-%---------------------------------------------------------
-%Highlighting text
+
+
+
+%%%%%%%%%%%%%%%%%% highlighting text and theorem boxes
 \begin{frame}
-\frametitle{Sample frame title}
+\frametitle{NAAQS Completeness Criteria}
 
 In this slide, some important text will be
 \alert{highlighted} because it's important.
@@ -111,10 +253,14 @@ Sample text in red box
 Sample text in green box. The title of the block is ``Examples".
 \end{examples}
 \end{frame}
-%---------------------------------------------------------
 
 
-%---------------------------------------------------------
+
+
+
+
+
+
 %Two columns
 \begin{frame}
 \frametitle{Two-column slide}
@@ -135,7 +281,11 @@ and on a second tought this is a nice looking
 layout in some cases.
 \end{columns}
 \end{frame}
-%---------------------------------------------------------
 
 
-\end{document}
+
+
+
+
+
+
