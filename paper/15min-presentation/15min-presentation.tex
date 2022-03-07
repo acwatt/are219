@@ -216,8 +216,8 @@ $\dvpp$ = $p$ design value for quarter, calculated using \textbf{imputed} PM2.5 
 %---------------------------------------------------------
 %Results: Sample EPA Sites
 \begin{frame}
-\frametitle{Results: Sample EPA Sites}
-\includegraphics[width=\textwidth]{}
+\frametitle{Results for Daily Design Value: Sample EPA Sites}
+\includegraphics[width=\textwidth]{output/figures/final_results/DV_plot_all_test_sites.png}
 \end{frame}
 %---------------------------------------------------------
 
@@ -225,28 +225,34 @@ $\dvpp$ = $p$ design value for quarter, calculated using \textbf{imputed} PM2.5 
 %---------------------------------------------------------
 %Results: Fresno
 \begin{frame}
-\frametitle{Results: Fresno}
-\begin{table}[]
-\caption{Design Value Comparison for Fresno, CA. (98\% CI Bounds)}
-\label{tab:fresno_dvs}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{@{}l|lll|lll@{}}
-Year-Quarter & \begin{tabular}[c]{@{}l@{}}Annual DV\\ Difference\end{tabular} & \begin{tabular}[c]{@{}l@{}}Upper \\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Lower\\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Hour DV \\ Difference\end{tabular} & \begin{tabular}[c]{@{}l@{}}Upper \\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Lower \\ Bound\end{tabular} \\ \midrule
-2018-4 & Invalid DV &  &  & Invalid DV &  &  \\
-2019-1 & -0.005 & 0.133 & -0.143 & 0.000 & 0.252 & 0.000 \\
-2019-2 & -0.003 & 0.141 & -0.147 & 0.000 & 0.252 & 0.000 \\
-2019-3 & 0.015 & 0.170 & -0.139 & 0.058 & 2.202 & 0.000 \\
-2019-4 & 0.002 & 0.190 & -0.185 & 0.000 & 1.460 & -0.024 \\
-2020-1 & -0.012 & 0.182 & -0.207 & 0.000 & 0.335 & 0.000 \\
-2020-2 & -0.010 & 0.191 & -0.211 & 0.000 & 0.376 & 0.000 \\
-2020-3 & 0.679 & 0.954 & 0.403 & 8.718 & 11.704 & 8.556 \\
-2020-4 & 0.647 & 1.006 & 0.288 & 5.979 & 8.281 & 5.851 \\
-2021-1 & 0.564 & 1.036 & 0.091 & 3.007 & 4.184 & 2.903 \\
-2021-2 & 0.533 & 1.024 & 0.042 & 3.007 & 4.225 & 2.903 \\
-2021-3 & 0.630 & 1.129 & 0.132 & 7.607 & 10.557 & 7.444
-\end{tabular}%
-}
-\end{table}
+\frametitle{Results for Daily Design Value: Fresno}
+
+
+\includegraphics[width=\textwidth]{output/figures/final_results/DV_plot_site_019-0500.png}
+
+
+\end{frame}
+%---------------------------------------------------------
+
+
+%---------------------------------------------------------
+%Results: Sample EPA Sites
+\begin{frame}
+\frametitle{Results for 24-hour Design Value: Sample EPA Sites}
+\includegraphics[width=\textwidth]{output/figures/final_results/DV}
+\end{frame}
+%---------------------------------------------------------
+
+
+%---------------------------------------------------------
+%Results: Fresno
+\begin{frame}
+\frametitle{Results for 24-hour Design Value: Fresno}
+
+
+\includegraphics[width=\textwidth]{output/figures/final_results/DV_plot_site_019-0500.png}
+
+
 \end{frame}
 %---------------------------------------------------------
 
@@ -255,6 +261,9 @@ Year-Quarter & \begin{tabular}[c]{@{}l@{}}Annual DV\\ Difference\end{tabular} & 
 %Conclusions & Discussion
 \begin{frame}
 \frametitle{Conclusions \& Discussion}
+\begin{enumerate}
+    \item Most sites tested show little evidence of bias from missing data, but some have large, meaningful bias
+\end{enumerate}
 \end{frame}
 %---------------------------------------------------------
 
@@ -304,10 +313,44 @@ $$
 %---------------------------------------------------------
 
 
+
+%---------------------------------------------------------
+% Fresno Site Data
+\begin{frame}
+\frametitle{Fresno Site Data}
+
+\hspace{5em}
+\includegraphics[width=0.8\textwidth]{pics/appendix/site_plots/site-019-0500_epa-pa-hourly-plot.png}
+\end{frame}
+%---------------------------------------------------------
+
+
 %---------------------------------------------------------
 %Extra Tables
 \begin{frame}
-\frametitle{Table: }
+\frametitle{Table: Fresno, California}
+
+\begin{table}[]
+\caption{Design Value Comparison for Fresno, CA. (98\% CI Bounds)}
+\label{tab:fresno_dvs}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}l|lll|lll@{}}
+Year-Quarter & \begin{tabular}[c]{@{}l@{}}Annual DV\\ Difference\end{tabular} & \begin{tabular}[c]{@{}l@{}}Upper \\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Lower\\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Hour DV \\ Difference\end{tabular} & \begin{tabular}[c]{@{}l@{}}Upper \\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Lower \\ Bound\end{tabular} \\ \midrule
+2018-4 & Invalid DV &  &  & Invalid DV &  &  \\
+2019-1 & -0.005 & 0.133 & -0.143 & 0.000 & 0.252 & 0.000 \\
+2019-2 & -0.003 & 0.141 & -0.147 & 0.000 & 0.252 & 0.000 \\
+2019-3 & 0.015 & 0.170 & -0.139 & 0.058 & 2.202 & 0.000 \\
+2019-4 & 0.002 & 0.190 & -0.185 & 0.000 & 1.460 & -0.024 \\
+2020-1 & -0.012 & 0.182 & -0.207 & 0.000 & 0.335 & 0.000 \\
+2020-2 & -0.010 & 0.191 & -0.211 & 0.000 & 0.376 & 0.000 \\
+2020-3 & 0.679 & 0.954 & 0.403 & 8.718 & 11.704 & 8.556 \\
+2020-4 & 0.647 & 1.006 & 0.288 & 5.979 & 8.281 & 5.851 \\
+2021-1 & 0.564 & 1.036 & 0.091 & 3.007 & 4.184 & 2.903 \\
+2021-2 & 0.533 & 1.024 & 0.042 & 3.007 & 4.225 & 2.903 \\
+2021-3 & 0.630 & 1.129 & 0.132 & 7.607 & 10.557 & 7.444
+\end{tabular}%
+}
+\end{table}
 \end{frame}
 %---------------------------------------------------------
 
