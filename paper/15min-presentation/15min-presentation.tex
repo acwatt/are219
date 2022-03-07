@@ -142,9 +142,9 @@ all 12 quarters in 3-year period (12 quarters)
 %---------------------------------------------------------
 %Purple Air Outdoor Monitors
 \begin{frame}
-\frametitle{Purple Air Outdoor Monitors}
+\frametitle{PurpleAir Outdoor Monitors}
 \hspace{1em}
-Purple Air Sensors in California 
+PurpleAir Sensors in California 
 \hspace{4em}
 LA Site Example \\
 
@@ -157,7 +157,21 @@ LA Site Example \\
 %---------------------------------------------------------
 %Alternate measure of ambient air quality
 \begin{frame}
-\frametitle{Alternate measure of ambient air quality}
+\frametitle{Alternate measure of ambient PM2.5 Concentration}
+
+\hspace{7em}
+\includegraphics[width=0.5\textwidth]{output/figures/diagrams/IDW_diagram.png}
+\\
+\textbf{Inverse-distance Weighted Average Ambient PM2.5}
+
+\begin{equation*}
+    PA^{IDW}_t= \sum\limits_{j=1}^{J_t} \dfrac{\frac{1}{d_j}\cdot PA_{j,t}}{\sum\limits_j^{J_t}\frac{1}{d_j}}
+    = \sum\limits_{j=1}^{J^t} w_{j,t}\cdot PA_{j,t}
+\end{equation*}
+\begin{itemize}
+    \item $J_t$ = active PurpleAir sensors around the NAAQS monitor at time $t$
+\end{itemize}
+
 \end{frame}
 %---------------------------------------------------------
 
@@ -166,6 +180,11 @@ LA Site Example \\
 %Predicting Missing EPA Data
 \begin{frame}
 \frametitle{Predicting Missing EPA Data}
+\begin{equation*}
+EPA_t = \beta_0 + \beta_1 PA^{IDW}_t + \varepsilon_t
+\end{equation*}
+
+\input{pics/appendix/tables/epa_OLS_idw_pa_site-037-4004_short}
 \end{frame}
 %---------------------------------------------------------
 
@@ -211,11 +230,58 @@ LA Site Example \\
 
 
 %---------------------------------------------------------
+% Purple Air EPA Correction
+\begin{frame}
+\frametitle{Correction of PurpleAir Readings}
+$$
+\widetilde{PA}_{j,t}=\begin{cases}
+			0.52*PA_{j,t} - 0.086*H_{j,t} + 5.75, & \text{if $PA_{j,t} \leq 343 \mu$g/m$^3$}\\
+            0.46*PA_{j,t} + 0.(3.93e-4)PA_{j,t}^2 + 2.97, & \text{otherwise}
+		 \end{cases}
+$$
+\begin{itemize}
+    \item $PA_{j,t}$ = ambient PM2.5 measured by PurpleAir sensor $j$ at time $t$
+    \item $H_{j,t}\in[0,1]$ is the relative humidity
+\end{itemize}
+\end{frame}
+%---------------------------------------------------------
+
+
+%---------------------------------------------------------
+% Future Prediction Equation
+\begin{frame}
+\frametitle{Better Prediction of EPA PM2.5}
+
+$$
+\widetilde{PA}_{j,t}=\begin{cases}
+			0.52*PA_{j,t} - 0.086*H_{j,t} + 5.75, & \text{if $PA_{j,t} \leq 343 \mu$g/m$^3$}\\
+            0.46*PA_{j,t} + 0.(3.93e-4)PA_{j,t}^2 + 2.97, & \text{otherwise}
+		 \end{cases}
+$$
+\begin{itemize}
+    \item $PA_{j,t}$ = ambient PM2.5 measured by PurpleAir sensor $j$ at time $t$
+    \item $H_{j,t}\in[0,1]$ is the relative humidity
+\end{itemize}
+\end{frame}
+%---------------------------------------------------------
+
+
+%---------------------------------------------------------
 %Extra Tables
 \begin{frame}
 \frametitle{Table: }
 \end{frame}
 %---------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
 
 
 \end{document}
