@@ -741,10 +741,58 @@ def plot_us_epa():
     plt.xlim([-124.8, -66.9])
     plt.ylim([24.5, 49.4])
     plt.tight_layout()
+    plt.legend(fontsize=17, frameon=True, facecolor='white')
     p_fig = PATHS.output / 'figures' / 'epa' / f'all_us_and_15_epa_monitors.png'
     plt.savefig(p_fig, dpi=200)
     plt.close(fig)
-    
+
+
+def plot_ca_epa():
+    """Plot all ca EPA NAAQS sensors, mark my sample"""
+    # Plot US shape
+    p1 = PATHS.data.gis / 'cb_2018_us_state_5m' / 'cb_2018_us_state_5m.shp'
+    gdf = gpd.read_file(p1)
+    gdf = gdf.query("STATEFP == '06'")  # keep only CA
+    ax = gdf.plot(color='grey', figsize=(8, 8), edgecolor="face", linewidth=0.4)
+
+    # Plot all EPA NAAQS monitors in black
+    p2 = PATHS.data.epa_monitors / 'aqs_monitors.csv'
+    df1 = pd.read_csv(p2, dtype=DTYPES)
+    df1 = df1.query("`NAAQS Primary Monitor` == 'Y' and `Parameter Code` == 88101")
+    df1 = df1.query("`Last Sample Date` > '2017-01-01' and `First Year of Data` < 2018")
+    df1 = df1.drop_duplicates(['State Code', 'County Code', 'Site Number'])
+    df1 = df1.query("`State Code` == '06'")
+    # 853 unique monitoring sites after this
+    gdf_epa_primary = add_latlon_points(df1, gdf.crs)
+    gdf_epa_primary.plot(ax=ax, color='black', markersize=12)
+
+    # Plot selected EPA NAAQS monitors in red
+    p3 = PATHS.data.epa_monitors / 'aqs_monitors_88101_hourly-ca-monitors.csv'
+    df3 = pd.read_csv(p3, dtype=DTYPES)
+    df3 = (df3
+           .assign(state="06", in_sample="In Sample")
+           .rename(columns={'site_number': 'Site Number',
+                            'county_code': 'County Code',
+                            'state': "State Code"}))
+    gdf_epa_sample = (gdf_epa_primary
+                      .merge(df3,
+                             how='left',
+                             on=['State Code', 'County Code', 'Site Number']))
+    gdf_epa_sample["in_sample"].iloc[gdf_epa_sample["in_sample"] != "In Sample"] = "Other EPA Monitors"
+    colors = {"In Sample": 'red', "Other EPA Monitors": 'black'}
+    # gdf_epa_sample.plot(ax=ax, label="In Sample", color=colors[key], markersize=16, legend=True)
+    for key, group in gdf_epa_sample.groupby("in_sample"):
+        group.plot(ax=ax, label=key, color=colors[key], legend=True)
+    [xmin, ymin, xmax, ymax] = gdf.bounds.values[0]
+    buffer = 0.1
+    plt.xlim([xmin - buffer, xmax + buffer])
+    plt.ylim([ymin - buffer, ymax + buffer])
+    plt.tight_layout()
+    plt.legend(fontsize=17, frameon=True, facecolor='white')
+    plt.show()
+    p_fig = PATHS.output / 'figures' / 'epa' / f'all_ca_and_15_epa_monitors.png'
+    plt.savefig(p_fig, dpi=200)
+
 
 def plot_california_pa():
     """Save plot of all CA PA """
@@ -753,6 +801,7 @@ def plot_california_pa():
 
 def generate_presentation_plots():
     plot_us_epa()
+    plot_ca_epa()
     plot_california_pa()
 
 
