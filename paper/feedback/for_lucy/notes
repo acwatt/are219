@@ -1,0 +1,89 @@
+Sections (pages)
+
+1. Intro (5)
+2. Backgroun (2)
+3. Framework / theory? (5)
+    3.1 Farm profit maxmization (2)
+    3.2 Model predictions (3)
+4. Data (6)
+    4.1 Administrative Water Data (4)
+    4.2 Ag outcomes (1.5)
+    4.3 Climate + weather data (.5)
+5. Empirical Strategy (3)
+6. Results (6)
+    6.1 First stage: restrictions inc. water transactions (1.5)
+    6.2 Effect of water prices on ag outcomes (4.5)
+7. Robustness (4)
+    7.1 Learning from past shocks (2)
+    7.2 Anticipation (1.5)
+    7.3 Alternative samples (.5)
+8 Conclusion (1)
+
+
+
+
+Tables (pages)
+
+
+
+
+
+
+
+Figures (pages)
+
+
+
+
+
+Equations (pages)
+
+1. crop production function with irrigation, land, crop-specific advantages
+2. irrigation production with capital and water consumption
+3. profit function with crop price, production function, water market prices
+4. surface water extraction limit contraint
+5. ground water extraction limit contraint
+6. definition of A -- vector of crop producties
+7. Cramer's rule => 
+
+
+
+
+Questions:
+- equ. 3 -- is there really a unique crop chioce only given convavity in production and continuous A? What if each production function with neighboring A_c (parameterized by a_c) have discontinuously different a_c? There are probably some conditions under which there is a unique optimal crop choice, but I think more would be necessary.
+
+
+
+Things I notice:
+
+
+
+
+
+Interesting / potential extensions:
+
+
+
+
+Background papers:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
