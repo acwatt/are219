@@ -2,3 +2,10 @@
 .Rproj.user
 .Rhistory
 *.sqlite
+.goutputstream*
+output/*
+data/*
+*.RData
+*.rdb
+*rdx
+*__pycache__*
