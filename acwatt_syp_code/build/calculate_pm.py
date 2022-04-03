@@ -364,7 +364,7 @@ def load_qualifiers():
     return pd.read_csv(p, converters={'Qualifier Type Code' : str})[['Qualifier Code', 'Qualifier Type Code']]
 
 
-def test_15_sites(run_all=False):
+def combine_15_sites(run_all=False):
     threshold = 5  # miles
     idw_power = 1  # Inv Distance Weighting Denominator Exponent
     min_sensors = 10  # min # of PA sensors to grab near EPA monitor
@@ -590,7 +590,7 @@ def calculate_design_values(df_daily: pd.DataFrame, quarters: list, pm_type: str
     years = [quarters[0:4], quarters[4:8], quarters[8:12]]  # list of list of four year-quarters
     dva, dvh = [], []
     for year in years:  # list of four year-quarters
-        # filter to these years
+        # filter to these year-quarters
         df_temp = df[df.year_quarter.isin(year)]
         # Get design values for PM2.5 column
         agg_dict = {f"pm2.5_{pm_type}_daily": [dv_annual, dv_hour]}
@@ -656,15 +656,17 @@ def save_daily_completeness(df, site_dict):
 
 def create_site_dvs(site_dict):
     completeness_list = []
-    # Load combined site data
+    # Load combined site data (loads 'epa', 'pa' pm2.5 columns)
     df = load_combined(site_dict)
     # Create qualifier / exceptional event indicator
     df = add_exceptional_indicator(df)
     # Drop Exceptional Hours
     df = df.query("drop_qualifier == False")
     # Make new combined EPA-PA column with IDW avereage PA data
+    # adds 'epa.idw.pa' pm2.5 column
     df = fill_in_missing_with_idw(df)
     # Make new combined EPA-PA column with OLS prediction from IDW PA data
+    # adds 'epa.olsnc.pa', 'epa.olsyc.pa', 'epa.olsyc.pa.lower', 'epa.olsyc.pa.upper' pm2.5 columns
     df = fill_in_missing_with_OLS(df, site_dict)
     completeness_list.append(save_hourly_completeness(df.copy(deep=True), site_dict))
     # Make Daily dataset (with indicators for valid > 75% complete)
@@ -675,7 +677,8 @@ def create_site_dvs(site_dict):
     for pm_type in ['epa', 'pa', 'epa.idw.pa', 'epa.olsnc.pa', 'epa.olsyc.pa', 'epa.olsyc.pa.lower', 'epa.olsyc.pa.upper']:
         df_list.append(annual_data(df_daily, pm_type))
     df_dv = pd.concat(df_list, ignore_index=True)
-    df_dv['county'] = site_dict['county']; df_dv['site'] = site_dict['site']
+    df_dv['county'] = site_dict['county']
+    df_dv['site'] = site_dict['site']
     return df_dv, completeness_list
 
 
