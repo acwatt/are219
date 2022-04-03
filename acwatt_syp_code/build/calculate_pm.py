@@ -732,6 +732,63 @@ def generate_predictions(df_):
 
 
 ################################################################################
+#                       REFEREE RESPONSES
+################################################################################
+##############################################
+#    Minimum DVs (max possible manipulation)
+##############################################
+def create_minimum_dvs():
+    # Load the county-site pairs
+    aqs_tbl = load_15_sites()
+    diffs_list, dv_list, complete_list = [], [], []
+    # For each EPA site-county in list
+    for county, site in aqs_tbl:  # cs_list
+        site_dict = {'county': county, 'site': site}
+        df, completeness_list = create_minimum_site_dvs(site_dict)
+        diffs_list.append(generate_differences(df, left=left, right_list=right_list))
+        dv_list.append(df)
+        complete_list += completeness_list
+    df_dv = pd.concat(dv_list, ignore_index=True)
+    df_dv.to_csv(PATHS.data.temp / 'design_value_est.csv', index=False)
+    df_save = pd.concat(diffs_list, ignore_index=True)
+    df_save['invalid quarter DV due to too many missing days'] = df_save.isnull().any(axis=1)
+    df_save.to_csv(PATHS.data.temp / 'design_value_differences.csv', index=False)
+    agg_dict = {f'annual_dv_diff_{right}': ['mean', 'std', 'max', 'min'] for right in right_list}
+    agg_dict.update({f'hour_dv_diff_{right}': ['mean', 'std', 'max', 'min'] for right in right_list})
+    agg_dict.update({'invalid quarter DV due to too many missing days': ['mean', 'size']})
+    df_stats = df_save.groupby(['county', 'site']).agg(agg_dict)
+    df_stats.reset_index().to_csv(PATHS.data.temp / 'design_value_site-stats.csv', index=False)
+    df_complete = pd.DataFrame(complete_list)
+    df_complete.to_csv(PATHS.data.temp / 'completeness_stats.csv')
+
+
+def create_minimum_site_dvs(site_dict):
+    completeness_list = []
+    # Load combined site data (loads 'epa', 'pa' pm2.5 columns)
+    df = load_combined(site_dict)
+    # Drop highest 6 hours from all days
+    df = drop_highest_6_hours(df)
+    # Make Daily dataset (with indicators for valid > 75% complete)
+    df_daily = daily_data(df)
+    completeness_list.append(save_daily_completeness(df_daily.copy(deep=True), site_dict))
+    # Calculate DVs for all quarters
+    df_list = []
+    for pm_type in ['epa', 'pa', 'epa.idw.pa', 'epa.olsnc.pa', 'epa.olsyc.pa', 'epa.olsyc.pa.lower', 'epa.olsyc.pa.upper']:
+        df_list.append(annual_data(df_daily, pm_type))
+    df_dv = pd.concat(df_list, ignore_index=True)
+    df_dv['county'] = site_dict['county']
+    df_dv['site'] = site_dict['site']
+    return df_dv, completeness_list
+
+
+def drop_highest_6_hours(df):
+    """Return dataframe with lowest 18 hours of each day."""
+    pass
+    df = df.groupby('')
+    return df
+
+
+################################################################################
 #                       Presentation Plots
 ################################################################################
 def add_latlon_points(df, crs, lat="Latitude", lon="Longitude"):
