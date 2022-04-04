@@ -117,6 +117,15 @@ There are currently 388 air quality monitoring stations around the US that are u
 % \cite{epa_event_1990}
 \textbf{Excluded Readings.} There are a number of events that create air quality measurements that cannot be used in NAAQS determination; wildfires or machine calibrations (for example) can cause hour- or day-long readings to be invalid for the purposes of NAAQS determination. These times, referred to as \textit{exceptional events} (EE), are events that are ``not expected to recur routinely at a given location, or that [are] possibly uncontrollable or unrealistic to control through the [NAAQS regulatory] process''\citep{epaEventQualifier1990}. These events are identified in the NAAQS monitor data and removed from the analysis: hours that have been labeled as EE are removed from both the PurpleAir and NAAQS monitor data before calculating design values.\footnote{See Appendix Section \ref{sec:tables} Table \ref{tab:excluded_qualifiers} for a detailed list of reasons that observations are excluded from NAAQS determinations.} These are not considered ``missing'' or ``unreported'' data for the sake of predicting missing values, however these are considered invalid observations in the design value calculation. Removing EE provides more realistic pseudo design value estimates.
 
+\textbf{}
+
+
+
+
+
+
+
+
 \subsection{PurpleAir Consumer Sensors}
 The last ten years have seen a growing interest in consumer-based air quality measurement. PurpleAir air quality sensors are designed to mainly measure PM2.5, but also measure other pollutants (PM10, ozone) and environmental factors (humidity, temperature).\footnote{See Appendix section \ref{sec:monitor_pictures} for pictures of both a NAAQS monitoring station and a typical PurpleAir outdoor pollution sensor}. In my analysis, PurpleAir PM2.5 data plays a ground-truth role -- it gives me an alternative source of PM2.5 measurements to rely on when the NAAQS monitor is shut off. 
 
@@ -367,20 +376,26 @@ The design value confidence intervals for the annual design values are nearly pe
 
 As noted in Section \ref{confidence_intervals}, to 95\% construct confidence intervals that are robust to testing many hypotheses, I use an adjusted significance level to produce the OLS prediction intervals. In the specific case of this paper, the significance level ends up being about 0.002.
 
-\textbf{Magnitude of the Design Value Statistic.} To help get a sense of the size of gap between the raw design values and the design values with imputed missing values, I have estimated the maximum amount of manipulation left in the raw data. For a moment, assume all PM2.5 data must be uploaded for each site at the end of each quarter and that each site has a data manager that can choose which observations to remove from the data before uploading. Under the NAAQS rules, all sites can omit up to 25\% of days from each quarter, and up to 25\% of hours from each day that is reported. There are no rules about which observations to choose.
-
-Further assume that this fictitious data manager desires to reduce the annual and 24-hour design values as much as possible for their site. An easy way to reduce both the average and the 98$^{th}$ percentile of days is to remove the top PM2.5  hours from each day until 75\% of hours remain, create new daily averages from the hours left, and drop the top PM2.5 days from the quarter until the quarter only has 75\% of days left. I have assumed the role of this fictitious data manager -- figure \ref{fig:dv_room_for_manipulation}
+\FloatBarrier
 
 \begin{wrapfigure}{R}{0.5\textwidth}
     \centering
-    \includegraphics[width=0.5\textwidth]{output/figures/final_results/DV_hour_plot_all_test_sites_conservative.png}
+    \includegraphics[width=0.5\textwidth]{output/figures/final_results/room_for_manipulation_hour_DV_all_sites.png}
     \smallskip\par
-    \includegraphics[width=\linewidth]{output/figures/final_results/DV_hour_plot_site_019-0500_conservative.png}
-    \caption{Difference between the 24-hour (98th percentile) pseudo design value from reported data and the predicted design value from filling in missing observations with predicted PM2.5 measurements. Fill represents the 95\% confidence intervals after correcting for multiple hypothesis testing. Top: all 15 sites; Bottom: site 019-0500.}
+    \includegraphics[width=\linewidth]{output/figures/final_results/room_for_manipulation_hour_DV_site_019-0500_conservative.png}
+    \caption{Room left for manipulation in raw EPA data -- the number of pollution units ($\mu$g/m$^3$) that the 24-hour design value can be reduced by omitting more hourly observations, down the minimum completeness limit set by the NAAQS rules. This is the gap between the pseudo design value and a new design value caluclated from fewer observations. Top: room left for manipulation for all sites. Bottom: room left for manipulation (blue) compared to the estimated gap due to actual missing data (red).}
     \label{fig:dv_room_for_manipulation}
 \end{wrapfigure}
 
+\textbf{Magnitude of the Design Value Statistic.} To help get a sense of the size of gap between the raw design values and the design values with imputed missing values, I have estimated the maximum amount of manipulation left in the raw, reported EPA data. For a moment, assume all PM2.5 data must be uploaded to the EPA database for each site at the end of each quarter. Also assume that each site has a data manager who can choose which observations to remove from the data before uploading. Under the NAAQS rules, all sites can omit up to 25\% of days from each quarter, and up to 25\% of hours from each day that is reported. To my knowledge, there are no rules about which observations to choose.
 
+Further assume that this fictitious data manager desires to reduce the annual and 24-hour design values as much as possible for their site. An easy way to reduce both the average and the 98$^{th}$ percentile of days is to remove the top PM2.5 hourly observations from each day until 75\% of hours remain, create new daily averages from the hours left, and drop the top PM2.5 days from the quarter until the quarter only has 75\% of days left. I have assumed the role of this fictitious data manager -- the top of figure \ref{fig:dv_room_for_manipulation} shows how much the 24-hour design value can be reduced by dropping hourly and daily observations this way. The numbers are quite large with most sites having values above 15 $\mu$g/m$^3$ in all available quarters. Keeping in mind that the 24-hour NAAQS threshold is currently 35 $\mu$g/m$^3$, this shows that the 75\% completeness rule leaves a meaningful amount of manipulation on the table, even for sites that have missing values already.
+
+The bottom of figure \ref{fig:dv_room_for_manipulation} shows the Fresno site, comparing how the room left for manipulation in the reported data compares to the estimated gap due to actual missing observations.
+
+For Fresno specifically, we can see that there is a lot of room left for intentional manipulation if a bad actor had 
+
+\FloatBarrier
 Using OLS to predict the missing EPA hourly observations using PurpleAir data results in prediction errors that are mean 0. Since we are taking 3-year averages, it is plausible that the errors from the imputation method would average out. These combined with the lower bounds being well above zero suggest there was indeed under-reporting of pollution in Fresno in 2020 and 2021. I cannot say whether or not that it happened intentionally or by mere chance of turning off the monitor at times that would likely have recorded higher pollution.
 
 
