@@ -337,10 +337,10 @@ The number of observations here are the number of hours between 2016 and 2021 wh
 
 \begin{wrapfigure}{r}{0.5\textwidth}
     \centering
-    \includegraphics[width=0.5\textwidth]{output/figures/final_results/DV_annual_plot_all_test_sites.png}
+    \includegraphics[width=0.5\textwidth]{output/figures/final_results/DV_annual_plot_all_test_sites_conservative.png}
     \smallskip\par
-    \includegraphics[width=\linewidth]{output/figures/final_results/DV_annual_plot_site_019-0500.png}
-    \caption{Difference between the annual pseudo design value from reported data and the predicted design value from filling in missing observations with predicted PM2.5 measurements. Top: all 15 sites; Bottom: site 019-0500.}
+    \includegraphics[width=\linewidth]{output/figures/final_results/DV_annual_plot_site_019-0500_conservative.png}
+    \caption{Difference between the annual pseudo design value from reported data and the predicted design value from filling in missing observations with predicted PM2.5 measurements. Fill represents the 95\% confidence intervals after correcting for multiple hypothesis testing. Top: all 15 sites; Bottom: site 019-0500.}
     \label{fig:dv_annual}
 \end{wrapfigure}
 
@@ -351,10 +351,10 @@ Note that design values are rounded to the nearest integer. So we can see that m
 \FloatBarrier
 \begin{wrapfigure}{R}{0.5\textwidth}
     \centering
-    \includegraphics[width=0.5\textwidth]{output/figures/final_results/DV_hour_plot_all_test_sites.png}
+    \includegraphics[width=0.5\textwidth]{output/figures/final_results/DV_hour_plot_all_test_sites_conservative.png}
     \smallskip\par
-    \includegraphics[width=\linewidth]{output/figures/final_results/DV_hour_plot_site_019-0500.png}
-    \caption{Difference between the 24-hour (98th percentile) pseudo design value from reported data and the predicted design value from filling in missing observations with predicted PM2.5 measurements. Top: all 15 sites; Bottom: site 019-0500.}
+    \includegraphics[width=\linewidth]{output/figures/final_results/DV_hour_plot_site_019-0500_conservative.png}
+    \caption{Difference between the 24-hour (98th percentile) pseudo design value from reported data and the predicted design value from filling in missing observations with predicted PM2.5 measurements. Fill represents the 95\% confidence intervals after correcting for multiple hypothesis testing. Top: all 15 sites; Bottom: site 019-0500.}
     \label{fig:dv_hour}
 \end{wrapfigure}
 
@@ -362,10 +362,26 @@ Note that design values are rounded to the nearest integer. So we can see that m
 
 % Also note the quick peaking and decline of Fresno's 24-hour design value between 2020 Q3 and 2021 Q2. Because the design values are based on 12 quarters, this shape is indicative of high quarterly observations in 2020 Q3 that increased the annual 98th percentile, and the following quarters have lower observations that 
 
-\noindent\textbf{24-hour Design Value Confidence Intervals}
+\noindent\textbf{24-hour Design Value Confidence Intervals.}
 The design value confidence intervals for the annual design values are nearly perfectly symmetric, while the 24-hour design value confidence intervals are highly asymmetric. This is expected because the annual design value is very close to a simply average of the daily observations, whereas the 24-hour design value is an order statistic that is sensitive to the placement of just a few predicted values that are higher in PM2.5 than the reported data. See Appendix Section \ref{sec:design_values} for a full discussion and example of why we can expect the lower bound of the 24-hour design value confidence interval to be much closer to the predicted value while the upper bound can be further away.
 
-Using OLS to predict the missing EPA hourly observations using PurpleAir data results in prediction errors that are mean 0. Since we are taking 3-year averages, it is plausible that the errors from the imputation method would average out. These combined with the lower bounds being well above zero suggest there was indeed under-reporting of pollution in Fresno. I cannot say whether or not that it happened intentionally or by mere chance of turning off the monitor at times that would likely have recorded higher pollution.
+As noted in Section \ref{confidence_intervals}, to 95\% construct confidence intervals that are robust to testing many hypotheses, I use an adjusted significance level to produce the OLS prediction intervals. In the specific case of this paper, the significance level ends up being about 0.002.
+
+\textbf{Magnitude of the Design Value Statistic.} To help get a sense of the size of gap between the raw design values and the design values with imputed missing values, I have estimated the maximum amount of manipulation left in the raw data. For a moment, assume all PM2.5 data must be uploaded for each site at the end of each quarter and that each site has a data manager that can choose which observations to remove from the data before uploading. Under the NAAQS rules, all sites can omit up to 25\% of days from each quarter, and up to 25\% of hours from each day that is reported. There are no rules about which observations to choose.
+
+Further assume that this fictitious data manager desires to reduce the annual and 24-hour design values as much as possible for their site. An easy way to reduce both the average and the 98$^{th}$ percentile of days is to remove the top PM2.5  hours from each day until 75\% of hours remain, create new daily averages from the hours left, and drop the top PM2.5 days from the quarter until the quarter only has 75\% of days left. I have assumed the role of this fictitious data manager -- figure \ref{fig:dv_room_for_manipulation}
+
+\begin{wrapfigure}{R}{0.5\textwidth}
+    \centering
+    \includegraphics[width=0.5\textwidth]{output/figures/final_results/DV_hour_plot_all_test_sites_conservative.png}
+    \smallskip\par
+    \includegraphics[width=\linewidth]{output/figures/final_results/DV_hour_plot_site_019-0500_conservative.png}
+    \caption{Difference between the 24-hour (98th percentile) pseudo design value from reported data and the predicted design value from filling in missing observations with predicted PM2.5 measurements. Fill represents the 95\% confidence intervals after correcting for multiple hypothesis testing. Top: all 15 sites; Bottom: site 019-0500.}
+    \label{fig:dv_room_for_manipulation}
+\end{wrapfigure}
+
+
+Using OLS to predict the missing EPA hourly observations using PurpleAir data results in prediction errors that are mean 0. Since we are taking 3-year averages, it is plausible that the errors from the imputation method would average out. These combined with the lower bounds being well above zero suggest there was indeed under-reporting of pollution in Fresno in 2020 and 2021. I cannot say whether or not that it happened intentionally or by mere chance of turning off the monitor at times that would likely have recorded higher pollution.
 
 
 \noindent\textbf{Did Flipping Occur?}
@@ -387,7 +403,7 @@ This work is (hopefully) just the beginning of a line of research regarding the 
 
 \newpage
 \bibliographystyle{chicago}
-\bibliography{references}
+\bibliography{references,references_old}
 % Citation command	Output
 % \citet{goossens93}      Goossens et al. (1993)
 % \citep{goossens93}      (Goossens et al., 1993)	
