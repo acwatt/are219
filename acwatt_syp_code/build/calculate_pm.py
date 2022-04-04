@@ -442,6 +442,18 @@ def fill_in_missing_with_OLS(df, site_dict, alpha=0.05):
     df['pm2.5_epa.olsyc.pa.upper'] = np.where(df['pm2.5_epa'].isna(), df['upper.yc'], df['pm2.5_epa'])
     df['pm2.5_epa.olsyc.pa.lower'] = np.where(df['pm2.5_epa'].isna(), df['lower.yc'], df['pm2.5_epa'])
 
+    # Add columns for conservative multiple hypothesis testing significance (referee)
+    alpha_conservative = 0.00656
+    k = 8; M = 198  # k approximate number of rejected hypotheses out of M total tested
+    alpha_conservative2 = (alpha / (1+alpha)) * (k / (M-k))  # 0.002..
+    frame_conservative = predictions.summary_frame(alpha=alpha_conservative2)
+    # Get prediction confidence interval upper and lower bounds for each observations
+    df['upper.yc.conservative'] = frame_conservative.obs_ci_upper  # Full set of upper bounds
+    df['lower.yc.conservative'] = frame_conservative.obs_ci_lower  # Full set of lower bounds
+    # Create two more combined sets of EPA PM, filling in upper and lower predictions
+    df['pm2.5_epa.olsyc.pa.upper.conservative'] = np.where(df['pm2.5_epa'].isna(), df['upper.yc.conservative'], df['pm2.5_epa'])
+    df['pm2.5_epa.olsyc.pa.lower.conservative'] = np.where(df['pm2.5_epa'].isna(), df['lower.yc.conservative'], df['pm2.5_epa'])
+
     # Save the regression summaries
     c_s = f'{site_dict["county"]}-{site_dict["site"]}'
     stargazer = Stargazer([model1, model2])
@@ -667,6 +679,7 @@ def create_site_dvs(site_dict):
     df = fill_in_missing_with_idw(df)
     # Make new combined EPA-PA column with OLS prediction from IDW PA data
     # adds 'epa.olsnc.pa', 'epa.olsyc.pa', 'epa.olsyc.pa.lower', 'epa.olsyc.pa.upper' pm2.5 columns
+    # also adds 'pm2.5_epa.olsyc.pa.upper.conservative' and 'pm2.5_epa.olsyc.pa.lower.conservative' (referee)
     df = fill_in_missing_with_OLS(df, site_dict)
     completeness_list.append(save_hourly_completeness(df.copy(deep=True), site_dict))
     # Make Daily dataset (with indicators for valid > 75% complete)
@@ -674,7 +687,7 @@ def create_site_dvs(site_dict):
     completeness_list.append(save_daily_completeness(df_daily.copy(deep=True), site_dict))
     # Calculate DVs for all quarters
     df_list = []
-    for pm_type in ['epa', 'pa', 'epa.idw.pa', 'epa.olsnc.pa', 'epa.olsyc.pa', 'epa.olsyc.pa.lower', 'epa.olsyc.pa.upper']:
+    for pm_type in ['epa', 'pa', 'epa.idw.pa', 'epa.olsnc.pa', 'epa.olsyc.pa', 'epa.olsyc.pa.lower', 'epa.olsyc.pa.upper', 'epa.olsyc.pa.lower.conservative', 'epa.olsyc.pa.upper.conservative']:
         df_list.append(annual_data(df_daily, pm_type))
     df_dv = pd.concat(df_list, ignore_index=True)
     df_dv['county'] = site_dict['county']
@@ -702,7 +715,7 @@ def generate_differences(df, left, right_list):
 
 def create_sample_dvs(left='epa', right_list=None):
     if right_list is None:
-        right_list = ['epa.idw.pa', 'epa.olsnc.pa', 'epa.olsyc.pa', 'epa.olsyc.pa.upper', 'epa.olsyc.pa.lower']  #
+        right_list = ['epa.idw.pa', 'epa.olsnc.pa', 'epa.olsyc.pa', 'epa.olsyc.pa.upper', 'epa.olsyc.pa.lower', 'epa.olsyc.pa.upper.conservative', 'epa.olsyc.pa.lower.conservative']  #
     # Load the county-site pairs
     aqs_tbl = load_15_sites()
     diffs_list, dv_list, complete_list = [], [], []
@@ -717,6 +730,11 @@ def create_sample_dvs(left='epa', right_list=None):
     df_dv.to_csv(PATHS.data.temp / 'design_value_est.csv', index=False)
     df_save = pd.concat(diffs_list, ignore_index=True)
     df_save['invalid quarter DV due to too many missing days'] = df_save.isnull().any(axis=1)
+    # Add indicators for significance
+    df_save['annual_significant'] = (df_save['annual_dv_diff_epa.olsyc.pa.lower']>0) | (df_save['annual_dv_diff_epa.olsyc.pa.upper']<0)
+    df_save['hour_significant'] = (df_save['hour_dv_diff_epa.olsyc.pa.lower']>0) | (df_save['hour_dv_diff_epa.olsyc.pa.upper']<0)
+    df_save['annual_significant_conservative'] = (df_save['annual_dv_diff_epa.olsyc.pa.lower.conservative']>0) | (df_save['annual_dv_diff_epa.olsyc.pa.upper.conservative']<0)
+    df_save['hour_significant_conservative'] = (df_save['hour_dv_diff_epa.olsyc.pa.lower.conservative']>0) | (df_save['hour_dv_diff_epa.olsyc.pa.upper.conservative']<0)
     df_save.to_csv(PATHS.data.temp / 'design_value_differences.csv', index=False)
     agg_dict = {f'annual_dv_diff_{right}': ['mean', 'std', 'max', 'min'] for right in right_list}
     agg_dict.update({f'hour_dv_diff_{right}': ['mean', 'std', 'max', 'min'] for right in right_list})
@@ -740,51 +758,53 @@ def generate_predictions(df_):
 def create_minimum_dvs():
     # Load the county-site pairs
     aqs_tbl = load_15_sites()
-    diffs_list, dv_list, complete_list = [], [], []
+    dv_list, complete_list = [], []
     # For each EPA site-county in list
     for county, site in aqs_tbl:  # cs_list
         site_dict = {'county': county, 'site': site}
-        df, completeness_list = create_minimum_site_dvs(site_dict)
-        diffs_list.append(generate_differences(df, left=left, right_list=right_list))
+        df = create_minimum_site_dvs(site_dict)
         dv_list.append(df)
-        complete_list += completeness_list
     df_dv = pd.concat(dv_list, ignore_index=True)
-    df_dv.to_csv(PATHS.data.temp / 'design_value_est.csv', index=False)
-    df_save = pd.concat(diffs_list, ignore_index=True)
-    df_save['invalid quarter DV due to too many missing days'] = df_save.isnull().any(axis=1)
-    df_save.to_csv(PATHS.data.temp / 'design_value_differences.csv', index=False)
-    agg_dict = {f'annual_dv_diff_{right}': ['mean', 'std', 'max', 'min'] for right in right_list}
-    agg_dict.update({f'hour_dv_diff_{right}': ['mean', 'std', 'max', 'min'] for right in right_list})
-    agg_dict.update({'invalid quarter DV due to too many missing days': ['mean', 'size']})
-    df_stats = df_save.groupby(['county', 'site']).agg(agg_dict)
-    df_stats.reset_index().to_csv(PATHS.data.temp / 'design_value_site-stats.csv', index=False)
-    df_complete = pd.DataFrame(complete_list)
-    df_complete.to_csv(PATHS.data.temp / 'completeness_stats.csv')
+    df_dv.to_csv(PATHS.data.temp / 'referee_minimum_design_value.csv', index=False)
 
 
 def create_minimum_site_dvs(site_dict):
-    completeness_list = []
     # Load combined site data (loads 'epa', 'pa' pm2.5 columns)
     df = load_combined(site_dict)
     # Drop highest 6 hours from all days
     df = drop_highest_6_hours(df)
-    # Make Daily dataset (with indicators for valid > 75% complete)
+    # Make Daily dataset (with indicators for valid > 75% complete, both daily and quarterly completeness)
     df_daily = daily_data(df)
-    completeness_list.append(save_daily_completeness(df_daily.copy(deep=True), site_dict))
+    # Drop highest days from each quarter
+    df_daily = drop_highest_days(df_daily)
     # Calculate DVs for all quarters
-    df_list = []
-    for pm_type in ['epa', 'pa', 'epa.idw.pa', 'epa.olsnc.pa', 'epa.olsyc.pa', 'epa.olsyc.pa.lower', 'epa.olsyc.pa.upper']:
-        df_list.append(annual_data(df_daily, pm_type))
-    df_dv = pd.concat(df_list, ignore_index=True)
+    df_dv = annual_data(df_daily, 'epa')
     df_dv['county'] = site_dict['county']
     df_dv['site'] = site_dict['site']
-    return df_dv, completeness_list
+    return df_dv
+
+
+def drop_highest_days(df_daily):
+    df = df_daily.copy(deep=True)
+    valid_days_lookup = {1: 68, 2: 68, 3: 69, 4: 69}
+    # Sort EPA reported values, lowest at top, NaN at bottom
+    df = df.copy(deep=True).sort_values(['year', 'quarter', 'pm2.5_epa_daily'], ascending=True)
+    # Create rank in quarter
+    df["rank"] = df.groupby(['year', 'quarter'])['pm2.5_epa_daily'].rank("dense", ascending=True)
+    # Add valid days needed
+    df['min_days'] = df.quarter.map(valid_days_lookup)
+    # Keep only if rank at or below # of valid days needs
+    df = df.loc[df['rank'] <= df['min_days']]
+    return df
 
 
 def drop_highest_6_hours(df):
     """Return dataframe with lowest 18 hours of each day."""
-    pass
-    df = df.groupby('')
+    # Sort EPA reported values, lowest at top, NaN at bottom
+    df = df.copy(deep=True).sort_values(['date_local', 'pm2.5_epa'], ascending=True)
+    # Keep only 18 lowest values in day (highest in the list)
+    # NaN first to be dropped (since it's at the bottom)
+    df = df.groupby('date_local').head(18).reset_index(drop=True)
     return df
 
 
@@ -962,23 +982,37 @@ def table_all_tested_sites():
     df = (df.groupby('Site').agg({}))
 
 
-def plot_all_tested_sites(dv_type='annual'):
+def plot_all_tested_sites(dv_type='annual', suffix=''):
     p = PATHS.data.temp / 'design_value_differences.csv'
     df = pd.read_csv(p, dtype=DTYPES)
     df['Site'] = df['county'] + "-" + df['site']
     # df = df[~df['annual_dv_diff_epa.olsyc.pa'].isna()]
     plt.figure(figsize=(10, 6))
     temp = df.query("Site == '037-4004'")
-    plt.plot(temp['year_quarter'], temp[f'{dv_type}_dv_diff_epa.olsyc.pa'], 'o-', label='037-4004')
-    plt.fill_between(temp['year_quarter'], temp[f'{dv_type}_dv_diff_epa.olsyc.pa.lower'],
-                     temp[f'{dv_type}_dv_diff_epa.olsyc.pa.upper'], alpha=0.2)
+    # Plot site '037-4004' to set the right x-axis
+    # Plot estimates (dots) and confidence intervals (fill)
+    plt.plot(temp['year_quarter'],
+             temp[f'{dv_type}_dv_diff_epa.olsyc.pa'],
+             'o-', label='037-4004')
+    plt.fill_between(temp['year_quarter'],
+                     temp[f'{dv_type}_dv_diff_epa.olsyc.pa.lower{f".{suffix}" if suffix else ""}'],
+                     temp[f'{dv_type}_dv_diff_epa.olsyc.pa.upper{f".{suffix}" if suffix else ""}'],
+                     alpha=0.2)
+    i = 1; symbol_list = ['o']*7 + ['v']*7 + ['*']
     for key, group in df.groupby("Site"):
-        type(key)
+        # Skip first site used above
         if key == '037-4004':
             continue
         else:
-            plt.plot(group['year_quarter'], group[f'{dv_type}_dv_diff_epa.olsyc.pa'], 'o-', label=key)
-            plt.fill_between(group['year_quarter'], group[f'{dv_type}_dv_diff_epa.olsyc.pa.lower'], group[f'{dv_type}_dv_diff_epa.olsyc.pa.upper'], alpha=0.2)
+            # Plot estimates (dots) and confidence intervals (fill)
+            plt.plot(group['year_quarter'],
+                     group[f'{dv_type}_dv_diff_epa.olsyc.pa'],
+                     f'{symbol_list[i]}-', label=key)
+            plt.fill_between(group['year_quarter'],
+                             group[f'{dv_type}_dv_diff_epa.olsyc.pa.lower{f".{suffix}" if suffix else ""}'],
+                             group[f'{dv_type}_dv_diff_epa.olsyc.pa.upper{f".{suffix}" if suffix else ""}'],
+                             alpha=0.2)
+        i += 1
     # Aesthetics
     plt.xlim([df.year_quarter.min(), df.year_quarter.max()])
     plt.xlabel('Year-Quarter')
@@ -986,11 +1020,12 @@ def plot_all_tested_sites(dv_type='annual'):
     plt.tight_layout()
     plt.legend(fontsize=10, frameon=True, facecolor='white', loc='upper left',
                ncol=3, title='EPA Site')
-    p_fig = PATHS.output / 'figures' / 'final_results' / f'DV_{dv_type}_plot_all_test_sites.png'
+    f = f'DV_{dv_type}_plot_all_test_sites{f"_{suffix}" if suffix else ""}.png'
+    p_fig = PATHS.output / 'figures' / 'final_results' / f
     plt.savefig(p_fig, dpi=200)
 
 
-def plot_site_dv(dv_type='annual', site='037-4004'):
+def plot_site_dv(dv_type='annual', site='037-4004', suffix=''):
     p = PATHS.data.temp / 'design_value_differences.csv'
     df = pd.read_csv(p, dtype=DTYPES)
     df['Site'] = df['county'] + "-" + df['site']
@@ -998,9 +1033,13 @@ def plot_site_dv(dv_type='annual', site='037-4004'):
     temp = df.query(f"Site == '{site}'")
     zeros = [0]*len(temp['year_quarter'])
     plt.plot(temp['year_quarter'], zeros, 'k-', linewidth=2)
-    plt.plot(temp['year_quarter'], temp[f'{dv_type}_dv_diff_epa.olsyc.pa'], 'o-', label=site)
-    plt.fill_between(temp['year_quarter'], temp[f'{dv_type}_dv_diff_epa.olsyc.pa.lower'],
-                     temp[f'{dv_type}_dv_diff_epa.olsyc.pa.upper'], alpha=0.2)
+    plt.plot(temp['year_quarter'],
+             temp[f'{dv_type}_dv_diff_epa.olsyc.pa'],
+             'o-', label=site)
+    plt.fill_between(temp['year_quarter'],
+                     temp[f'{dv_type}_dv_diff_epa.olsyc.pa.lower{f".{suffix}" if suffix else ""}'],
+                     temp[f'{dv_type}_dv_diff_epa.olsyc.pa.upper{f".{suffix}" if suffix else ""}'],
+                     alpha=0.2)
     # Aesthetics
     plt.xlim([df.year_quarter.min(), df.year_quarter.max()])
     plt.xlabel('Year-Quarter')
@@ -1008,7 +1047,8 @@ def plot_site_dv(dv_type='annual', site='037-4004'):
     plt.tight_layout()
     plt.legend(fontsize=10, frameon=True, facecolor='white', loc='upper left',
                ncol=3, title='EPA Site')
-    p_fig = PATHS.output / 'figures' / 'final_results' / f'DV_{dv_type}_plot_site_{site}.png'
+    f = f'DV_{dv_type}_plot_site_{site}{f"_{suffix}" if suffix else ""}.png'
+    p_fig = PATHS.output / 'figures' / 'final_results' / f
     plt.savefig(p_fig, dpi=200)
 
 
@@ -1047,15 +1087,117 @@ def plot_epa_completeness():
     chart.save(PATHS.output / 'figures' / 'epa_vs_pa' / 'completeness' / f'completeness_epa_pa.png', scale_factor=4.0)
 
 
+def plot_dv_diff(df, dv_type):
+    plt.figure(figsize=(10, 6))
+    # Plot site 037-4004 to set the x-axis properly
+    temp = df.query(f"Site == '037-4004'")
+    plt.plot(temp['year_quarter'], temp[f'{dv_type}_diff_min'], 'o-', label='037-4004')
+    # Plot the rest of the sites
+    i = 1; symbol_list = ['o']*7 + ['v']*7 + ['*']
+    for key, group in df.groupby("Site"):
+        if key == '037-4004':
+            continue
+        else:
+            plt.plot(group['year_quarter'], group[f'{dv_type}_diff_min'],
+                     f'{symbol_list[i]}-', label=key)
+        i += 1
+    # Aesthetics
+    plt.xlim([df.year_quarter.min(), df.year_quarter.max()])
+    plt.xlabel('Year-Quarter')
+    plt.ylabel(f'Reported {dv_type} DV - Maximum Manipulated {dv_type} DV')
+    plt.tight_layout()
+    plt.legend(fontsize=10, frameon=True, facecolor='white', loc='upper left',
+               ncol=3, title='EPA Site')
+    p_fig = PATHS.output / 'figures' / 'referee' / f'room_for_manipulation_{dv_type}_DV_all_sites.png'
+    plt.savefig(p_fig, dpi=200)
+
+
+def plot_dv_diff_with_minimum_possible(df, dv_type, site):
+    plt.figure(figsize=(10, 6))
+    # Plot thick black line at zero
+    zeros = [0] * len(df['year_quarter'])
+    plt.plot(df['year_quarter'], zeros, 'k-', linewidth=2)
+    # Plot esimtated difference in DVs from filling in missing
+    plt.plot(df['year_quarter'], df[f'{dv_type}_dv_diff_epa.olsyc.pa'], 'o-', label="Upward gap from filling in missing")
+    # Plot 95% confidence interval
+    plt.fill_between(df['year_quarter'], df[f'{dv_type}_dv_diff_epa.olsyc.pa.lower'],
+                     df[f'{dv_type}_dv_diff_epa.olsyc.pa.upper'], alpha=0.2)
+    # Plot max manipulation differenence for scale
+    plt.plot(df['year_quarter'], df[f'{dv_type}_diff_min'], 'o-',
+             label="Downward gap from max additional manipulation", fillstyle='none')
+    # Aesthetics
+    plt.xlim([df.year_quarter.min(), df.year_quarter.max()])
+    plt.xlabel('Year-Quarter')
+    plt.ylabel(f'Difference between raw and calculated {dv_type} Design Values')
+    plt.title(f'Gap in {dv_type} design values for site {site}')
+    plt.tight_layout()
+    plt.legend(fontsize=10, frameon=True, facecolor='white', loc='upper left',
+               ncol=3, title='Desgin Value Gap Type')
+    p_fig = PATHS.output / 'figures' / 'referee' / f'room_for_manipulation_{dv_type}_DV_site_{site}.png'
+    plt.savefig(p_fig, dpi=200)
+
+
+def plot_minimum_possible_all_tested_sites():
+    """Save plot of estimated DVs and minimum possible DVS.
+
+    Minimum possible DVs generated by removing:
+        - top 6 hours from every day
+        - top remaining days from each quarter to get to minimum completeness
+    """
+    p1 = PATHS.data.temp / 'design_value_est.csv'
+    p2 = PATHS.data.temp / 'referee_minimum_design_value.csv'
+    df_raw = pd.read_csv(p1, dtype=DTYPES).query("pm_type == 'epa'")
+    df_min = pd.read_csv(p2, dtype=DTYPES)
+    # Merge minimum possible DVs with DVs from raw EPA data
+    df = df_raw.merge(df_min, how='left', on=['year_quarter', 'county', 'site'], suffixes=("", "_min"))
+    df['Site'] = df['county'] + "-" + df['site']
+    # Plot the differences for all sites on one plot
+    for dv_type in ['annual', 'hour']:
+        df[f'{dv_type}_diff_min'] = df[dv_type] - df[f'{dv_type}_min']
+        plot_dv_diff(df, dv_type)
+
+
+def plot_minimum_possible_all_tested_sites_by_site():
+    """Save individual site plot of estimated differences of DVs due to max manipulation and estimated filling in.
+
+    Minimum possible DVs generated by removing:
+        - top 6 hours from every day
+        - top remaining days from each quarter to get to minimum completeness
+    """
+    p1 = PATHS.data.temp / 'design_value_differences.csv'
+    p2 = PATHS.data.temp / 'referee_minimum_design_value.csv'
+    df = pd.read_csv(p1, dtype=DTYPES)
+    df_min = pd.read_csv(p2, dtype=DTYPES)
+    df_min = df_min.rename(columns={'annual': 'annual_min', 'hour': 'hour_min'})
+    # Merge minimum possible DVs with DVs from raw EPA data
+    df = df.merge(df_min, how='left', on=['year_quarter', 'county', 'site'])
+    df['Site'] = df['county'] + "-" + df['site']
+    # For each site, for each of annual and hour,
+    # plot both estimated diff from filling in, and diff_min from max manipulation
+    for dv_type in ['annual', 'hour']:
+        df[f'{dv_type}_diff_min'] = df[f"{dv_type}_epa"] - df[f'{dv_type}_min']
+        for key, group in df.groupby("Site"):
+            plot_dv_diff_with_minimum_possible(group, dv_type, site=key)
+
+            print('here')
+
+
 def generate_presentation_plots():
     # plot_us_epa()
     # plot_ca_epa()
     # plot_california_pa()
-    # for dv_type in ['annual', 'hour']:
-    #     plot_all_tested_sites(dv_type=dv_type)
-    #     plot_site_dv(dv_type=dv_type, site='019-0500')
-    plot_epa_completeness()
-    pass
+    for dv_type in ['annual', 'hour']:
+        plot_all_tested_sites(dv_type=dv_type)
+        plot_site_dv(dv_type=dv_type, site='019-0500')
+    # plot_epa_completeness()
+
+    # Referee plots --------------------------------
+    plot_minimum_possible_all_tested_sites()
+    plot_minimum_possible_all_tested_sites_by_site()
+    for dv_type in ['annual', 'hour']:
+        plot_all_tested_sites(dv_type=dv_type, suffix='conservative')
+        plot_site_dv(dv_type=dv_type, site='019-0500', suffix='conservative')
+    print('done?')
 
 
 ################################################################################
