@@ -10,6 +10,7 @@
 \usepackage{setspace}
 \doublespacing
 \usepackage{graphicx}
+\usepackage[table,xcdraw]{xcolor}
 \usepackage{placeins} % \FloatBarrier
 \usepackage{wrapfig}
 \usepackage{multirow}
@@ -263,13 +264,21 @@ I then create predicted NAAQS PM values using PurpleAir data as described in the
     \text{bias}^{miss}(\dvh) &\approx \dvhh - \dvh
 \end{align}
 
-If this quantity is positive, then there is support that there is under-reporting of pollution via allowed missing data. To gain an understanding of significance of the results, I also propagate the upper and lower bounds of the predicted observations through the design value calculation (similar to \cite{fowlieBringingSatelliteBasedAir2019}, but they were estimating out of sample prediction errors). This provides a 95\% confidence interval -- upper and lower bounds on the imputed design values: $\dvaa^{upper}$,  $\dvaa^{lower}$, $\dvhh^{upper}$, and $\dvhh^{lower}$.
+If this quantity is positive, then there is support that there is under-reporting of pollution via allowed missing data. 
 
 \textbf{NAAQS.} The standards set out in the National Ambient Air Quality Standards give specific thresholds to compare the design values to. Above the thresholds are considered nonattainment. The primary standard for the annual design value is 12 $\mu$g/m$^3$, and has a secondary standard of 12 $\mu$g/m$^3$. The 24-hour standard is 35 $\mu$g/m$^3$.
 
 
 \textbf{Exceptional Events.} As mentioned in section 3, there are many events for which the EPA allows local regulators to exclude their readings from design value calculations. These readings were removed from the dataset before any design value calculations and do not get imputed.
 
+
+
+\subsection{Confidence Intervals \& Inference} \label{confidence_intervals}
+To gain an understanding of significance of the results, I also propagate the upper and lower bounds of the predicted observations through the design value calculation (similar to \cite{fowlieBringingSatelliteBasedAir2019}, but they were estimating out of sample prediction errors). Propagating the bounds of the prediction intervals this way provides a confidence interval -- upper and lower bounds on the imputed design values: $\dvaa^{upper}$,  $\dvaa^{lower}$, $\dvhh^{upper}$, and $\dvhh^{lower}$.
+
+\textbf{Multiple Hypothesis Testing and Significance Levels.} Suppose I am interested in confidence intervals at a level of significance $\alpha$. If I simply propagate prediction intervals of level $\alpha$ through the design value calculation, I would end up with $\alpha$-level confidence intervals that are valid for single-hypothesis inference -- overstating the significance of the results and underestimating the true $\alpha$-level confidence intervals. In total, I am conducting 198 different hypothesis tests, testing each of 15 sites for their two design values on up to 12 quarters. Following \cite{benjamini_adaptive_2006}, I use their two-stage procedure for selecting the correct significance level of the prediction intervals to propagate through the design value calculation, the correct level that will represent an $\alpha$-level confidence interval given the multiplicity of hypotheses.\footnote{See \cite{anderson_multiple_2008} for an helpful description of applying the two-stage procedure.}
+
+For this paper, I present 95\% confidence intervals (0.05 significance level), which correspond to a corrected significance level of approximately 0.002 applied to the prediction intervals and propagated through the design value calculation. See Appendix Section \ref{sec:multiple_hypothesis} for a full description of the iterative procedure used to attain the corrected significance level.
 
 
 
@@ -282,7 +291,7 @@ If this quantity is positive, then there is support that there is under-reportin
 \section{Results and Discussion}
 \label{results}
 %==============================================
-I conducted 15 design value tests on 15 different NAAQS monitors. To create the predicted design value for each NAAQS monitor, I regressed the NAAQS monitor PM2.5 readings on the weighted average PurpleAir readings. An example of this regression is below for one of the Los Angeles monitors. I ran regions both with an without a constant, but because I wanted the prediction errors to have mean zero, I chose to use model (2) in the creation of the design value. Note that the $R^2$ value in model (1) is much higher, however $R^2$ values between regressions with constant and those without are no comparable due to the difference in denominators. 
+I conducted 15 design value tests on 15 different NAAQS monitors. To create the predicted design values for each NAAQS monitor, I regressed the NAAQS monitor PM2.5 readings on the weighted average PurpleAir readings. An example of this regression is below for one of the Los Angeles monitors. I ran regressions both with and without a constant, but because I wanted the prediction errors to have mean zero, I chose to use model (2) in the creation of the design values. Note that the $R^2$ value in model (1) is much higher, however $R^2$ values between regressions with constant and those without are not comparable due to the difference in denominators. 
 \input{pics/appendix/tables/epa_OLS_idw_pa_site-037-4004}
 
 The number of observations here are the number of hours between 2016 and 2021 where neither the NAAQS monitor or the weighted average PurpleAir readings were missing. The slope in both models is less than one, indicating that PurpleAir tends to measure higher PM2.5 concentrations. This could be a selection issue -- consumers who choose to buy a PurpleAir monitor and place it outside their house are probably concerned about pollution -- or a measurement difference between the types of devices.
@@ -302,35 +311,67 @@ The number of observations here are the number of hours between 2016 and 2021 wh
 
 
 
-\begin{table}[]
-\caption{Design Value Comparison for Fresno, CA. (98\% CI Bounds)}
-\label{tab:fresno_dvs}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{@{}l|lll|lll@{}}
-Year-Quarter & \begin{tabular}[c]{@{}l@{}}Annual DV\\ Difference\end{tabular} & \begin{tabular}[c]{@{}l@{}}Upper \\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Lower\\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Hour DV \\ Difference\end{tabular} & \begin{tabular}[c]{@{}l@{}}Upper \\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Lower \\ Bound\end{tabular} \\ \midrule
-2018-4 & Invalid DV &  &  & Invalid DV &  &  \\
-2019-1 & -0.005 & 0.133 & -0.143 & 0.000 & 0.252 & 0.000 \\
-2019-2 & -0.003 & 0.141 & -0.147 & 0.000 & 0.252 & 0.000 \\
-2019-3 & 0.015 & 0.170 & -0.139 & 0.058 & 2.202 & 0.000 \\
-2019-4 & 0.002 & 0.190 & -0.185 & 0.000 & 1.460 & -0.024 \\
-2020-1 & -0.012 & 0.182 & -0.207 & 0.000 & 0.335 & 0.000 \\
-2020-2 & -0.010 & 0.191 & -0.211 & 0.000 & 0.376 & 0.000 \\
-2020-3 & 0.679 & 0.954 & 0.403 & 8.718 & 11.704 & 8.556 \\
-2020-4 & 0.647 & 1.006 & 0.288 & 5.979 & 8.281 & 5.851 \\
-2021-1 & 0.564 & 1.036 & 0.091 & 3.007 & 4.184 & 2.903 \\
-2021-2 & 0.533 & 1.024 & 0.042 & 3.007 & 4.225 & 2.903 \\
-2021-3 & 0.630 & 1.129 & 0.132 & 7.607 & 10.557 & 7.444
-\end{tabular}%
-}
-\end{table}
+% \begin{table}[]
+% \caption{Design Value Comparison for Fresno, CA. (98\% CI Bounds)}
+% \label{tab:fresno_dvs}
+% \resizebox{\textwidth}{!}{%
+% \begin{tabular}{@{}l|lll|lll@{}}
+% Year-Quarter & \begin{tabular}[c]{@{}l@{}}Annual DV\\ Difference\end{tabular} & \begin{tabular}[c]{@{}l@{}}Upper \\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Lower\\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Hour DV \\ Difference\end{tabular} & \begin{tabular}[c]{@{}l@{}}Upper \\ Bound\end{tabular} & \begin{tabular}[c]{@{}l@{}}Lower \\ Bound\end{tabular} \\ \midrule
+% 2018-4 & Invalid DV &  &  & Invalid DV &  &  \\
+% 2019-1 & -0.005 & 0.133 & -0.143 & 0.000 & 0.252 & 0.000 \\
+% 2019-2 & -0.003 & 0.141 & -0.147 & 0.000 & 0.252 & 0.000 \\
+% 2019-3 & 0.015 & 0.170 & -0.139 & 0.058 & 2.202 & 0.000 \\
+% 2019-4 & 0.002 & 0.190 & -0.185 & 0.000 & 1.460 & -0.024 \\
+% 2020-1 & -0.012 & 0.182 & -0.207 & 0.000 & 0.335 & 0.000 \\
+% 2020-2 & -0.010 & 0.191 & -0.211 & 0.000 & 0.376 & 0.000 \\
+% 2020-3 & 0.679 & 0.954 & 0.403 & 8.718 & 11.704 & 8.556 \\
+% 2020-4 & 0.647 & 1.006 & 0.288 & 5.979 & 8.281 & 5.851 \\
+% 2021-1 & 0.564 & 1.036 & 0.091 & 3.007 & 4.184 & 2.903 \\
+% 2021-2 & 0.533 & 1.024 & 0.042 & 3.007 & 4.225 & 2.903 \\
+% 2021-3 & 0.630 & 1.129 & 0.132 & 7.607 & 10.557 & 7.444
+% \end{tabular}%
+% }
+% \end{table}
 
-Table \ref{tab:fresno_dvs} reports the difference between the pseudo design value (calculated using the reported data) and the imputed design value -- what I believe is an estimate on the design value bias due to low reporting standards. We can see the first row is invalid. This is common in the full results in the Appendix. This occurs because one of the design values have too many invalid days in the quarter (or the 11 quarters before it) the completeness criteria are violated. Examining the Annual design value difference column, the numbers do not seem striking though the lower half do seem to be statistically significant. However, these are not materially significant -- the EPA has rounding conventions (to the ones place) that would make zero effectively within the lower bound since a design value falling below 0.5 would be rounded to 0.
+\FloatBarrier
 
-These unremarkable results for the annual design value bias (columns 2-4) are fairly representative of the batch of 15 sites. When we look at the hour design value results above (columns 5-7), we can see in 2020 and 2021, there were fairly large and significant differences between the design values. This indicates that having more restrictive data collection standards could have increased Fresno's design value significantly in these quarters. Because OLS was used to impute the missing values, we would expect the hourly imputed values to be unbiased on average. Since we are taking 3-year averages, it seems plausible to believe most bias in the imputation method would average out. These combined with the lower bounds being well above zero suggest there was indeed under-reporting of pollution in Fresno. I cannot say whether or not that it happened intentionally or by mere chance of turning off the monitor at times that would likely have recorded higher pollution.
+\begin{wrapfigure}{r}{0.5\textwidth}
+    \centering
+    \includegraphics[width=0.5\textwidth]{output/figures/final_results/DV_annual_plot_all_test_sites.png}
+    \smallskip\par
+    \includegraphics[width=\linewidth]{output/figures/final_results/DV_annual_plot_site_019-0500.png}
+    \caption{Difference between the annual pseudo design value from reported data and the predicted design value from filling in missing observations with predicted PM2.5 measurements. Top: all 15 sites; Bottom: site 019-0500.}
+    \label{fig:dv_annual}
+\end{wrapfigure}
 
-Is this meaningful for Fresno though? Fresno has had nonattainment status for many years and is listed on several lists within this literature as having notable pollution measurement issues. So though Fresno's recorded design value would have been higher, they were already well over the 24-hour design threshold of 35 $\mu$g/m$^3$, having pseudo design values in the 50s and 60s in 2020 and 2021.
+\noindent\textbf{Annual Design Values.} For each site tested, Figure \ref{fig:dv_annual} graphically shows the difference between the pseudo design value (calculated using the reported data) and the imputed design value -- what I believe is an estimate on the design value bias due to low reporting standards. We can see that not all sites have points for all quarters. This is common in the full results (Appendix Table \ref{tab:design_value_comparisons}) and this occurs because the site has too many invalid days in one of the 12 quarters used to calculate the design value for that quarter (the completeness criteria are violated). 
 
-This is also just one of 15 cases, where the other 14 did not show interesting results. So is this just p-hacking to find the case study that is, by chance, abnormal? In regulation of air pollution, one might be concerned with individual actors or regions trying to get around the regulations. Since the Clean Air Act and the NAAQS are designed to ensure that all American residents can share in a minimum standard, it seems relevant to me to be able to diagnose mismeasurement.
+Note that design values are rounded to the nearest integer. So we can see that most of the differences in the graph are much smaller than possible rounding errors and have relatively wide confidence intervals containing zero difference. There is one site that jumps out (site 019-0500, Fresno, CA). Looking at that site in the bottom of Figure \ref{fig:dv_annual}, we can see that the confidence intervals are significantly different from zero, but are not meaningfully large because the predicted difference in quarter 3 of 2020 is still less than 1 $\mu$g/m$^3$ and are not likely to flip the attainment status.
+
+\FloatBarrier
+\begin{wrapfigure}{R}{0.5\textwidth}
+    \centering
+    \includegraphics[width=0.5\textwidth]{output/figures/final_results/DV_hour_plot_all_test_sites.png}
+    \smallskip\par
+    \includegraphics[width=\linewidth]{output/figures/final_results/DV_hour_plot_site_019-0500.png}
+    \caption{Difference between the 24-hour (98th percentile) pseudo design value from reported data and the predicted design value from filling in missing observations with predicted PM2.5 measurements. Top: all 15 sites; Bottom: site 019-0500.}
+    \label{fig:dv_hour}
+\end{wrapfigure}
+
+\noindent\textbf{24-hour Design Values.} Figure \ref{fig:dv_hour} depicts the difference in 24-hour design values. We can see in 2020 and 2021, there were fairly large and significant differences between the design values for site 019-0500 (Fresno). A positive value indicates that the imputed design value is larger than the design value based only on reported data. This means that having a higher data collection standard could have increased Fresno's design value significantly in these quarters. The increase in the Fresno 24-hour design value for the third quarter of 2020 is between 8.55 and 11.7 $\mu$g/m$^3$. This represents a meaningful difference because the 24-hour design value threshold is 35 $\mu$g/m$^2$ and if an area is near the threshold, a difference of 9 or 10 units could change the attainment status.
+
+% Also note the quick peaking and decline of Fresno's 24-hour design value between 2020 Q3 and 2021 Q2. Because the design values are based on 12 quarters, this shape is indicative of high quarterly observations in 2020 Q3 that increased the annual 98th percentile, and the following quarters have lower observations that 
+
+\noindent\textbf{24-hour Design Value Confidence Intervals}
+The design value confidence intervals for the annual design values are nearly perfectly symmetric, while the 24-hour design value confidence intervals are highly asymmetric. This is expected because the annual design value is very close to a simply average of the daily observations, whereas the 24-hour design value is an order statistic that is sensitive to the placement of just a few predicted values that are higher in PM2.5 than the reported data. See Appendix Section \ref{sec:design_values} for a full discussion and example of why we can expect the lower bound of the 24-hour design value confidence interval to be much closer to the predicted value while the upper bound can be further away.
+
+Using OLS to predict the missing EPA hourly observations using PurpleAir data results in prediction errors that are mean 0. Since we are taking 3-year averages, it is plausible that the errors from the imputation method would average out. These combined with the lower bounds being well above zero suggest there was indeed under-reporting of pollution in Fresno. I cannot say whether or not that it happened intentionally or by mere chance of turning off the monitor at times that would likely have recorded higher pollution.
+
+
+\noindent\textbf{Did Flipping Occur?}
+Is the magnitude of the bias from missing data meaningful for Fresno though? Fresno has had nonattainment status for many years and is mentioned within the literature as having notable pollution measurement issues. So though Fresno's recorded design value would have been higher, they were already well over the 24-hour design threshold of 35 $\mu$g/m$^3$, having pseudo design values in the 50s and 60s in 2020 and 2021. However, pollution in nonattainment counties generally decreases over time. So if Fresno were to fall below the threshold and into attainment based on reported values, a downward bias of 8-11 $\mu$g/m$^3$ in the 24-hour design value could be enough to flip the attainment status. So while this bias does not play a pivotal role in Fresno at this time, it may be important in the future and may be important for other areas not currently in this study that are closer to the nonattainment threshold.
+
+This is also just one of 15 cases, where the other 14 did not show interesting results. So is this just p-hacking to find the case study that is, by chance, abnormal? In regulation of air pollution, one might be concerned with individual actors or regions trying to get around the regulations. Since the Clean Air Act and the NAAQS are designed to ensure that all US residents can share in a minimum standard, it seems relevant to be able to diagnose the occurrence and size of mismeasurement, even if it is occurring at only a few sites in the network. Especially considering how sparse regulatory air quality monitors are in the US, a single systematic mismeasurement of pollution can have impacts on millions of people.
 
 This work is (hopefully) just the beginning of a line of research regarding the distribution of pollution and pollution policies in the US. There is a to-do list in the Appendix.
 
@@ -367,8 +408,12 @@ This work is (hopefully) just the beginning of a line of research regarding the 
 \newpage
 \section{Appendix}
 
-\subsection{Research Project To-do's} \label{sec:todo}
+\subsection{Faculty Feedback} \label{sec:faculty_feedback}
+\input{A_faculty_feedback}
 
+
+\newpage
+\subsection{Research Project To-do's} \label{sec:todo}
 \textbf{Future Work}
 \begin{itemize}
     \item I have only tested 15 of 388 possible sites. Now that I have written the bulk of the code to manage the data, most of the future work lies in acquiring the rest of the data for the NAAQS monitors and PurpleAir monitors.
@@ -410,12 +455,27 @@ PA_{j,t} \cdot Winddir_{i,t,k} + u_{i,t}
 % \input{pics/appendix/tables/data_cleaning_steps}
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 \newpage
 \subsection{Design Values}
 \label{sec:design_values}
 
 Notes about design values:
 \begin{itemize}
+\setlength{\itemsep}{0.5em}
     \item Valid days: a day that has 18 or more valid hours in it.
     \item Valid quarters: a 3-month period that has at least 67. 68, or 69 valid days in it.
     \item Valid 3-year period: a 12-quarter period that has 12 valid quarters in it.
@@ -423,20 +483,160 @@ Notes about design values:
     \item All averages below assume there might be some data missing.
     \item Design values are based on quarters, so each quarter has a rolling average over the last 3 years before.
 \end{itemize}
-
+%
 \textbf{To construct the annual design value for a given quarter:}
 \begin{itemize}
     \item Construct an average for every day.
     \item Construct an annual average of daily averages for every previous 12-month period before this quarter.
     \item Construct the 3-year average of those annual averages. Because some years have a different number of real or valid days in them, you cannot take a simple 3-year average of all available days or hours.
 \end{itemize}
-
+%
 \textbf{To construct the 24-hour design value:}
 \begin{itemize}
     \item Construct an average for every day.
     \item Construct a 98th percentile of all daily averages in the 4-quarter period ending in this quarter. To avoid ambiguous design value construction, the EPA provides a lookup table for which $n^{th}$ maximum daily value to take when constructing the 98th percentile.
     \item Take a 3-year average of the 98th percentiles.
 \end{itemize}
+
+
+
+\newpage\noindent
+\textbf{Asymmetry of the design value confidence intervals:}
+
+The confidence intervals for the annual design value are fairly symmetric (in fact, not perfectly symmetric). This is expected because the the confidence interval for each OLS prediction is symmetric and the average design value is nearly a simple average (very close to the first moment of the hourly observations). ``Nearly a simple average'' because the daily design value is not a simple average of all hourly observations; it takes daily averages over 18 to 24 possibly valid hourly observations, and is a simple average of all valid daily averages. Since some daily averages are calculated on fewer than 24 hourly observations and therefore have different denominators, it is close to, but not exactly, a simple average.
+
+The confidence intervals for the 24-hour design value are highly asymmetric. This is also expected as the 24-hour design value is an order statistic of the distribution of daily averages, not a moment of the distribution. The 24-hour design value takes the 98th percentile of daily averages, thus it is a function of a single daily observation of the right tail of the distribution and is highly sensitive to inserting new values further to the right of it (inserting higher PM2.5 daily observations).
+
+For clarity, consider the following simplied example: assume that we only need one year's worth of daily PM2.5 observations to calculate a 24-hour design value for the fictional Albatross County. Further assume that we start with 100 valid daily PM2.5 observations in a single year, used to calculate the 24-hour design value. The design value will be the 98th percentile -- \textbf{the third highest} -- of the daily observations. 
+
+Say we can fill in 100 missing days with predicted values from PurpleAir measurements. The total is now 200 daily observations, of which, we would choose the sixth highest value for the 98th percentile. Assume Table \ref{tab:hypothetical-data} display the top three daily observations of the original 100 EPA daily observations and top six daily observations of the 100 filled in missing days. The table also includes symmetric upper and lower bounds for the prediction intervals of the daily 
+
+% Please add the following required packages to your document preamble:
+% \usepackage{graphicx}
+\begin{table}[h!]
+\caption{Hypothetical PM2.5 daily averages from EPA reported measurements and PurpleAir-imputed daily averages that were missing from the EPA data. Column 1: top three original EPA PM2.5 measurements. Columns 2-4: The six added daily averages that were greater than the EPA top 3 daily averages, where added daily averages were filled-in from PurpleAir.}
+\label{tab:hypothetical-data}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{c|c|c|c|}
+\hline
+\multicolumn{1}{|c|}{EPA original} & PA Upper Bound & PA Predicted & PA Lower Bound \\ \hline
+\multicolumn{1}{|c|}{30} & 50 & 40 & 30 \\ \hline
+\multicolumn{1}{|c|}{29} & 50 & 40 & 30 \\ \hline
+\multicolumn{1}{|c|}{15} & 50 & 40 & 30 \\ \hline
+ & 50 & 40 & 30 \\ \cline{2-4} 
+ & 45 & 35 & 25 \\ \cline{2-4} 
+ & 40 & 30 & 20 \\ \cline{2-4} 
+\end{tabular}%
+}
+\end{table}
+
+\FloatBarrier
+
+Now we can examine the 98th percentile in each of the following four situations: 
+\begin{enumerate}
+    \item the original reported EPA data (column 1) which gives us the original design value
+    \item the EPA data with the upper bound of predicted data (columns 1 and 2) -- the upper bound of the predicted design value
+    \item the EPA data with the predicted data (columns 1 and 3) -- the predicted design value
+    \item the EPA data with the lower bound of predicted data (columns 1 and 4) -- the lower bound of the predicted design value
+\end{enumerate}
+
+In Table \ref{tab:hypothetical-data-sorted}, the data is combined and sorted for each of the four cases. We can see that the 98th percentile (bolded) for all three combined datasets (columns 2-4) is larger than the 98th percentile of the original data (column 1). We can also see that both the predicted 98th percentile and the lower bound of the prediction are equal to 30, while the upper bound of the prediction is 40. This hypothetical example details a simple property of the order statistics for this paper's use case: when adding new predicted data points to the original data, the confidence interval of the 98th percentile (any order statistics in fact) can be highly asymmetric, especially when the predicted values have relatively large prediction intervals.
+
+
+% Please add the following required packages to your document preamble:
+% \usepackage{graphicx}
+% \usepackage[table,xcdraw]{xcolor}
+% If you use beamer only pass "xcolor=table" option, i.e. \documentclass[xcolor=table]{beamer}
+\begin{table}[]
+\caption{Hypothetical top PM2.5 daily observations, combined and sorted from Table \ref{tab:hypothetical-data}. Column 1: Sorted top three original EPA daily observations (no new data, 100 days). Columns 2-4: Sorted top observations, combining original EPA data with predicted data (the upper bound of the predictions, the prediction, and the lower bound of the predictions, all with 200 total days). The original EPA data is in red and the 98th percentile of each dataset is bolded.}
+\label{tab:hypothetical-data-sorted}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{c|c|c|c|}
+\hline
+\multicolumn{1}{|c|}{EPA original} & Upper Bound & Predicted & Lower Bound \\ \hline
+\multicolumn{1}{|c|}{{\color[HTML]{FF0000} 30}} & 50 & 40 & {\color[HTML]{FF0000} 30} \\ \hline
+\multicolumn{1}{|c|}{{\color[HTML]{FF0000} 30}} & 50 & 40 & {\color[HTML]{FF0000} 30} \\ \hline
+\multicolumn{1}{|c|}{{\color[HTML]{FF0000} \textbf{15}}} & 50 & 40 & 30 \\ \hline
+ & 50 & 40 & 30 \\ \cline{2-4} 
+ & 45 & 35 & {\color[HTML]{FE0000} 30} \\ \cline{2-4} 
+ & \textbf{40} & \textbf{30} & {\color[HTML]{FE0000} \textbf{30}} \\ \cline{2-4} 
+ & {\color[HTML]{FF0000} 30} & {\color[HTML]{FF0000} 30} & 25 \\ \cline{2-4} 
+ & {\color[HTML]{FF0000} 30} & {\color[HTML]{FF0000} 30} & 20 \\ \cline{2-4} 
+ & {\color[HTML]{FF0000} 15} & {\color[HTML]{FF0000} 15} & {\color[HTML]{FF0000} 15} \\ \cline{2-4} 
+\end{tabular}%
+}
+\end{table}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\newpage
+\subsection{Adjusting Confidence Intervals for Multiple Hypotheses}
+\label{sec:multiple_hypothesis}
+\cite{benjamini_adaptive_2006} show that we can use a two-stage procedure for correcting our p-value threshold for the issue of multiple hypothesis testing. In this procedure, you first estimate your statistics and test all hypotheses at the uncorrected level of significance. You can then use the number of total and rejected hypotheses to correct the significance threshold and conduct the hypothesis tests again. Given that the practitioner has p-values of the estimated statistics, this allows one to only run the estimation procedure once. Due to the complexity of the design values and the mixture of non-random data with random data,\footnote{In this application, the raw data reported to the EPA are treated as fixed and the missing data are estimated and have uncertainty.} it is significantly less cumbersome to produce confidence intervals at a given level of significance during the estimation process than to produce p-values.
+\noindent The original two-stage method is as follows:
+\begin{align*}
+\intertext{Let $\alpha$ be the desired level of significance, $m$ be the total number of hypotheses being tested, and $m_0$ be the true number of correct null hypotheses. Define}
+\alpha' &= \frac{\alpha}{1+\alpha}
+\intertext{\textbf{Stage 1:} Conduct all $m$ single-hypothesis tests at a level of significance $\alpha$. Denote $r_1$ as the number of rejected null hypotheses.}
+\intertext{\textbf{Stage 2:} Let $\hat m_0 = m - r_1$ be the estimated number of correct null hypotheses. Define}
+\alpha^* &= \alpha' \frac{m}{\hat m_0}
+\intertext{Denote $p_i$ as the p-value from the $i^{th}$ statistic, and let the ordered p-values be $p_{(1)}\leq ... \leq p_{(m)}$. Then define the number of multiple-hypothesis-corrected rejected hypotheses as}
+k &= \max \{i:  p_{(i)} \leq \alpha^* \frac{i}{m}\}
+\intertext{This $k$ can also be found using the step-down procedure, starting at the largest p-value and iterating to lower p-values until $p_{(i)} \leq \alpha^* \frac{i}{m} = (\alpha'\frac{m}{\hat m_0}) \frac{i}{m} = \alpha'\frac{i}{\hat m_0} $. }
+\end{align*}
+In the case of this paper, I did not attain p-values during estimation. But it is relatively simple to re-estimate confidence intervals. So I have created a slightly modified version of the above procedure in order to iterate through successively larger confidence intervals until I converge on the correct estimate of the number of correct null hypotheses. The modified procedure is as follows:
+
+\begin{enumerate}
+    \item Estimate the design value confidence intervals for all $m$ design values using naive $\alpha$-level prediction upper and lower bounds. (I have $m=198$ separate design values and use an $\alpha=0.05$ level of confidence.)
+    \item Denote $r_1$ as the number of design values with naive confidence intervals outside of zero. Estimate the number of correct null hypotheses in iteration 1 as $\hat m_0^1 = m - r_1$. (I had $r_1=24$ confidence intervals that did not include zero, and $\hat m_0^1 = 198 - 24 = 174$ estimated correct null hypotheses.)
+    \item I now need to know if the number of rejected hypotheses $r_1$ change if I adjust the significance level of the prediction intervals. But I need to know what level of significance to compare to, since the original procedure makes the comparison $p_{(i)} \leq \alpha'\frac{i}{\hat m_0}$. I know the $r_1^{th}$ statistic is the least-significant statistic and is closest to becoming insignificant. So testing if $r_1$ (the number of rejected null hypotheses) changes is the same as testing if the $r_1^{th}$ statistics stays significant. For the $r_1^{th}$ statistic to be significant, we want $p_{(r_1)} \leq \alpha'\frac{r_1}{\hat m_0^1}$. This holds if the $r_1^{th}$ single-hypothesis confidence interval of level $\alpha'\frac{r_1}{\hat m_0^1}$ does not contain zero. So I rerun the estimation process, creating prediction intervals at the $\alpha'\frac{r_1}{\hat m_0^1}$ level. (Here, $\alpha'\frac{r_1}{\hat m_0^1}  \approx 0.048 \frac{24}{198} \approx 0.0066$)
+    \item Denote $r_2$ as the new number of rejected null hypotheses (confidence intervals not containing zero). If $r_2=r_1$, we have applied the correct confidence intervals and the $r_1$ statistics are still significant. If $r_2=0$, then we can stop and none of the null hypotheses are rejected. If $r_2<r_1$, then we must re-estimate confidence intervals at the new corrected level using $r_2$ and  $\hat m_0^2 = m - r_2$, resulting in $r_3$ rejected null hypotheses. We then need to check if $r_3=r_2$.
+    \item Repeat this until $r_k = r_{k-1}$. We now have a consistent estimate of the true number of rejected null hypotheses. Then, to get the $\alpha$-level multiple hypothesis confidence intervals, the appropriate single-hypothesis confidence interval to apply is of level $\alpha'\frac{r_{k-1}}{\hat m_0^{k-1}}$. (Here, this converges after 2 iterations, going from 24 rejected null hypotheses, to 10, then to 8. The final level of significance used on the prediction intervals is $\alpha'\frac{r_3}{\hat m_0^3} \approx 0.048 \frac{8}{190} \approx 0.002$. This is a $\frac{0.05}{0.002}=25$ factor reduction in the significance level applied to the prediction intervals, which are then propagated through the design value calculation to get 95\% confidence intervals. )
+\end{enumerate}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 \newpage
@@ -498,5 +698,5 @@ Notes about design values:
 
 
 
-\input{z_appendix_site_plots}
+% \input{z_appendix_site_plots}
 \end{document}

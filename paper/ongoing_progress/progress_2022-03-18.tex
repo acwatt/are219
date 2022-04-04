@@ -54,22 +54,25 @@
 %This block of code is for the table of contents after
 %the title page
 \begin{frame}
-\frametitle{Motivation}
-\textbf{Clean Air} 
+\frametitle{State of project}
+\textbf{Data (2016-2021)} 
 
 \begin{itemize}
-    \item The Clean Air Act (1970) established National Ambient Air Quality Standards
-    (NAAQS) for US counties
-    \item Either "attainment" or "non-attainment", penalties/forced adoption
-    \item Minimum requirement of 75\% of readings, per quarter
-    \item Air quality can change quickly
-    \item Monitor shutoffs are common
+    \item have: 15 CA EPA sites
+    \item have: all hourly data for PA sites within 50 miles of all 15 EPA sites
+    \item want: all US PA data
+    \item can before April 11: get 10-50 more EPA sites
 \end{itemize}
 \vspace{2em}
-\textbf{Research Questions}
+\textbf{Analysis}
 \begin{itemize}
-\item How biased are EPA monitor-based measures of local air quality?
-\item Does this bias significantly change NAAQS attainment status?
+\item have: Inverse distance weighted mean of PA
+\item have: OLS to predict EPA with PA, give prediction intervals\\
+$EPA_t = \beta_0 + \beta_1 PA^{IDW}_t + \varepsilon_t
+$
+\item want: prediction (1): more complicated OLS with windspeed and direction
+\item prediction (2): machine learning model
+\item can before April 11: probably windspeed and direction model
 \end{itemize}
 
 \end{frame}
@@ -79,56 +82,63 @@
 
 %---------------------------------------------------------
 \begin{frame}
-\frametitle{EPA National Ambient Air Quality Standards Monitors}
+\frametitle{Data Use Agreement}
 
-\includegraphics[width=\textwidth]{output/figures/epa/combined_uc_cali_epa.png}
-\end{frame}
-
-%---------------------------------------------------------
-
-
-%---------------------------------------------------------
-%Example of the \pause command
-\begin{frame}
-\frametitle{National Ambient Air Quality Standards for PM2.5}
-Two standards for assessing compliance for ambient PM2.5 concentrations at the location of a monitor:
-\vspace{2em}
-
-\textbf{Daily Design Value} (average)
 \begin{itemize}
-    \item[$\Rightarrow$] 3-year rolling average of 1-year average of daily averages
-    \item[$\Rightarrow$] standard currently set at 15.0 $\mu$g/m$^3$
+    \item Gave Adrian Dybwad draft person DUA
+    \item Adrian said legal folks ask if we could do this at the University level
+    \item I asked if we could do a temporary DUA while we get the university level one figured out
 \end{itemize}
-\vspace{1em}
 
-\textbf{24-Hour Design Value} (98$^{th}$ percentile)
-\begin{itemize}
-    \item[$\Rightarrow$] 3-year rolling average of 1-year 98$^{th}$ percentile of daily averages
-    \item[$\Rightarrow$] standard currently set at 35 $\mu$g/m$^3$
-\end{itemize}
-\end{frame}
-%---------------------------------------------------------
-
-
-%---------------------------------------------------------
-%Highlighting text
-\begin{frame}
-\frametitle{NAAQS Completeness Criteria for daily monitors}
-
-\textbf{Valid day:}
-minimum of 75\% hours reported  (18 hours)
-
-\vspace{2em}
-\textbf{Valid quarter:}
-minimum of 75\% valid days  (22-23 days\footnote{fewer for monitors that report less frequent observations})
-
-\vspace{2em}
-\textbf{Valid quarterly design value:}
-every in 3-year period
-(12 quarters)
+What are the first steps to getting a university level DUA?
 
 \end{frame}
+
 %---------------------------------------------------------
+
+
+% %---------------------------------------------------------
+% %Example of the \pause command
+% \begin{frame}
+% \frametitle{National Ambient Air Quality Standards for PM2.5}
+% Two standards for assessing compliance for ambient PM2.5 concentrations at the location of a monitor:
+% \vspace{2em}
+
+% \textbf{Daily Design Value} (average)
+% \begin{itemize}
+%     \item[$\Rightarrow$] 3-year rolling average of 1-year average of daily averages
+%     \item[$\Rightarrow$] standard currently set at 15.0 $\mu$g/m$^3$
+% \end{itemize}
+% \vspace{1em}
+
+% \textbf{24-Hour Design Value} (98$^{th}$ percentile)
+% \begin{itemize}
+%     \item[$\Rightarrow$] 3-year rolling average of 1-year 98$^{th}$ percentile of daily averages
+%     \item[$\Rightarrow$] standard currently set at 35 $\mu$g/m$^3$
+% \end{itemize}
+% \end{frame}
+% %---------------------------------------------------------
+
+
+% %---------------------------------------------------------
+% %Highlighting text
+% \begin{frame}
+% \frametitle{NAAQS Completeness Criteria for daily monitors}
+
+% \textbf{Valid day:}
+% minimum of 75\% hours reported  (18 hours)
+
+% \vspace{2em}
+% \textbf{Valid quarter:}
+% minimum of 75\% valid days  (22-23 days\footnote{fewer for monitors that report less frequent observations})
+
+% \vspace{2em}
+% \textbf{Valid quarterly design value:}
+% every in 3-year period
+% (12 quarters)
+
+% \end{frame}
+% %---------------------------------------------------------
 
 
 %---------------------------------------------------------
