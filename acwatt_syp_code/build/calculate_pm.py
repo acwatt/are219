@@ -1112,7 +1112,7 @@ def plot_dv_diff(df, dv_type):
     plt.savefig(p_fig, dpi=200)
 
 
-def plot_dv_diff_with_minimum_possible(df, dv_type, site):
+def plot_dv_diff_with_minimum_possible(df, dv_type, site, suffix=''):
     plt.figure(figsize=(10, 6))
     # Plot thick black line at zero
     zeros = [0] * len(df['year_quarter'])
@@ -1120,8 +1120,10 @@ def plot_dv_diff_with_minimum_possible(df, dv_type, site):
     # Plot esimtated difference in DVs from filling in missing
     plt.plot(df['year_quarter'], df[f'{dv_type}_dv_diff_epa.olsyc.pa'], 'o-', label="Upward gap from filling in missing")
     # Plot 95% confidence interval
-    plt.fill_between(df['year_quarter'], df[f'{dv_type}_dv_diff_epa.olsyc.pa.lower'],
-                     df[f'{dv_type}_dv_diff_epa.olsyc.pa.upper'], alpha=0.2)
+    plt.fill_between(df['year_quarter'],
+                     df[f'{dv_type}_dv_diff_epa.olsyc.pa.lower{f".{suffix}" if suffix else ""}'],
+                     df[f'{dv_type}_dv_diff_epa.olsyc.pa.upper{f".{suffix}" if suffix else ""}'],
+                     alpha=0.2)
     # Plot max manipulation differenence for scale
     plt.plot(df['year_quarter'], df[f'{dv_type}_diff_min'], 'o-',
              label="Downward gap from max additional manipulation", fillstyle='none')
@@ -1133,7 +1135,8 @@ def plot_dv_diff_with_minimum_possible(df, dv_type, site):
     plt.tight_layout()
     plt.legend(fontsize=10, frameon=True, facecolor='white', loc='upper left',
                ncol=3, title='Desgin Value Gap Type')
-    p_fig = PATHS.output / 'figures' / 'referee' / f'room_for_manipulation_{dv_type}_DV_site_{site}.png'
+    f = f'room_for_manipulation_{dv_type}_DV_site_{site}{f"_{suffix}" if suffix else ""}.png'
+    p_fig = PATHS.output / 'figures' / 'referee' / f
     plt.savefig(p_fig, dpi=200)
 
 
@@ -1178,8 +1181,7 @@ def plot_minimum_possible_all_tested_sites_by_site():
         df[f'{dv_type}_diff_min'] = df[f"{dv_type}_epa"] - df[f'{dv_type}_min']
         for key, group in df.groupby("Site"):
             plot_dv_diff_with_minimum_possible(group, dv_type, site=key)
-
-            print('here')
+            plot_dv_diff_with_minimum_possible(group, dv_type, site=key, suffix='conservative')
 
 
 def generate_presentation_plots():

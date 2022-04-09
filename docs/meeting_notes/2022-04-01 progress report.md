@@ -10,12 +10,23 @@ Using PurpleAir to Replace Missing Pollution Data
 Paper by Sunday night
 
 
-* Ed paper: Downwind and out: The strategic dispersion of power plants and their pollution
+* Ed paper: What’s missing in environmental (self-)monitoring: Evidence from strategic shutdowns of pollution monitors
 * Update introduction: broad motivation, and here's an application
-    policy design depends on unbiased data. The econ lit has identified.... right now we rely on this parse network, but we have 
+    policy design depends on unbiased data. The econ lit has identified.... right now we rely on this sparse network, but we have access to a dense network of consumer sensors.
  - a variety of applications is... as has been explored earlier in the lit., we can predict the pollution during missing times
  - compared to the satellite data
  - inclusion of wildfire days
+ 
+
+
+One possible application the this new network of PM monitors is to examine how vulnerable the current NAAQS are to manipulation. There is a line of research studying various pathways of manipulation of these standards including strategic placement of the monitor (cite), strategic communication to reduce pollution on monitoring days (cite), and strategic omission of data (Mu et al. 2021). This paper contributes to this last line of research, where Mu et al. (2021) examine plausibly strategic monitor shutdowns. They examine how full-day omissions in the regulatory monitor data are related to the local regulator's belief that high pollution is coming, proxied by local pollution alerts. This paper extends Mu et al. (2021) in two main ways: enabling the analysis of hour-level omissions in addition to day-level omissions; and examining the omission of observations that might occur after absent the local regulator's prior belief that high pollution was coming in the near future.
+
+Extensions from Mu et al 2021:
+- Mu et al look at pollution alerts which limits the study to missing day-level observations. Because I am examining hourly measurements, I can additionally study how the omission of hourly measurements can effect compliance with the standards. As Mu et al. mention, upto 25\% of daily measurements can be omitted while still complying with the federal completeness standard. Of the at least 75\% of days that must be reported, the completeness goals also allow up to 6 hours to be omitted for each reported day. This represents another possible 18.75 percentage points of hourly observations that could be omitted from the reported days while maintaining completeness, on top of up to 25\% missing full days.
+- Mu et al use pollution alerts to proxy for local regulator's prediction of high pollution, allowing them to test if data are more likely to be missing when a locality has signaled their belief of higher future pollution. This examines the likelihood of missing data that coincide with predictions of high pollution, regardless if the realization of pollution measure
+Findment at the location of the regulatory monitor is high or not following the pollution alert. However, there is also the possibility of data omissions resulting from high realized pollution but where no pollution alert was given (either because the high pollution was not predicted or because the prediction was not high enough to warrent a pollution alert). The concurrent PurpleAir data from sensors near the regulator monitor allow me to explore data omission occuring in all cases of realized high pollution. So an additional contribution of this application is the ability to examine missing data, possibily omitted *after* data was recorded, but in events when the high pollution was not predicted.
+
+This paper also builds off recent literature ... Fowlie et al. ?
 
 
 
@@ -89,6 +100,7 @@ Hard to know if this is the absolute minimum attainable value from dropping obse
 - Unclear to me what the asyptotic distribution of the design values are (especially the 24-hour DV).
 - Ethan and Max both directed me to talk to Michael -- seeing him on Monday.
 
+Benjamini 2006!
 
 
 
