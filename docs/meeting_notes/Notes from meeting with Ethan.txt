@@ -5,7 +5,8 @@
 
 2. Another exercise would be to ask how much room is left for additional manipulation. That is, suppose a data controller cared about boosting numbers and wanted to drop as many data points as would be allowed. Given the data that are being reported and the slack in the number dropped, how much of a difference would additional manipulation make? This is sort of a scale exercise for asking how useful manipulation might be.
 
-
+DONE
+- should try just days, just hours, to compare to both
 
 
 
@@ -13,8 +14,7 @@
 
 More generally, one might argue that this paper is a very interesting measurement exercise in search of an economic application. The possibility of flipping attainment status is one way to turn this into an economics/policy narrative, but you might also consider something more broad, like stating that “effective regulation requires reliable measurement,” and then asking if the measure here is manipulable. Obviously we know that there are other types of manipulation (from prior literature), so your contribution is to look for the possibility of manipulation in this particular mechanism.
 
-
-
+- perhaps non-linear -- event study type estimate with binned PA PM amounts?
 
 
 
